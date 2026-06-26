@@ -40,6 +40,26 @@ struct MenuItemRow: View {
     }
 }
 
+// MARK: - Token rate gauge (stacked bars: 0 미사용 → 3 폭발적)
+
+struct UsageGauge: View {
+    let level: Int   // 0–3
+
+    var body: some View {
+        VStack(spacing: 1.5) {
+            bar(active: level >= 3, color: .red)
+            bar(active: level >= 2, color: .orange)
+            bar(active: level >= 1, color: .green)
+        }
+    }
+
+    private func bar(active: Bool, color: Color) -> some View {
+        RoundedRectangle(cornerRadius: 0.5)
+            .fill(active ? color : Color.secondary.opacity(0.15))
+            .frame(width: 5, height: 3)
+    }
+}
+
 // MARK: - Water tank gauge (vertical, drains from top)
 
 struct WaterTankView: View {
@@ -71,12 +91,14 @@ struct MenuBarView: View {
     @ObservedObject private var usageReader = AnthropicUsageReader.shared
     @ObservedObject private var sessions   = SessionReader.shared
     @ObservedObject private var codexReader = CodexSessionReader.shared
+    @ObservedObject private var limits     = UsageLimits.shared
     let openDashboard: () -> Void
+    let openSettings: () -> Void
 
-    // Claude: Anthropic usage cache exists
-    private var isClaudeConnected: Bool { usageReader.usage != nil }
-    // Codex: at least one archived session exists
-    private var isCodexConnected: Bool { !codexReader.sessions.isEmpty }
+    // Claude: 사용 설정 ON + Anthropic usage cache exists
+    private var isClaudeConnected: Bool { limits.claudeEnabled && usageReader.usage != nil }
+    // Codex: 사용 설정 ON + at least one archived session exists
+    private var isCodexConnected: Bool { limits.codexEnabled && !codexReader.sessions.isEmpty }
 
     private enum ConnectionState {
         case none, claudeOnly, codexOnly, both
@@ -122,13 +144,18 @@ struct MenuBarView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkle")
+            HStack(spacing: 16) {
+                Image(nsImage: AppDelegate.makeClaudeIcon())
+                    .resizable()
+                    .renderingMode(.template)
+                    .frame(width: 22, height: 22)
                     .foregroundStyle(.tertiary)
-                Image(systemName: "terminal")
+                Image(nsImage: AppDelegate.makeCodexIcon())
+                    .resizable()
+                    .renderingMode(.template)
+                    .frame(width: 22, height: 22)
                     .foregroundStyle(.tertiary)
             }
-            .font(.system(size: 18))
             Text("연결된 AI 없음")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
@@ -208,9 +235,14 @@ struct MenuBarView: View {
             if let pct {
                 WaterTankView(pct: pct, color: pctColor(pct))
                     .frame(width: tankW, height: tankH)
-                Text(String(format: "%.0f%%", pct * 100))
-                    .font(.system(size: numSize, weight: .bold, design: .monospaced))
-                    .foregroundStyle(pctColor(pct))
+                HStack(alignment: .center, spacing: 4) {
+                    Text(String(format: "%.0f%%", pct * 100))
+                        .font(.system(size: numSize, weight: .bold, design: .monospaced))
+                        .foregroundStyle(pctColor(pct))
+                    if label == "5시간 창" {
+                        UsageGauge(level: appState.tokenRateLevel)
+                    }
+                }
             } else {
                 RoundedRectangle(cornerRadius: 5)
                     .fill(Color.secondary.opacity(0.1))
@@ -326,17 +358,9 @@ struct MenuBarView: View {
             Divider()
             MenuItemRow(label: "설정", icon: "gear") { openSettings() }
             Divider()
-            MenuItemRow(label: "종료", icon: nil) { NSApplication.shared.terminate(nil) }
-        }
-    }
+            MenuItemRow(label: "종료", icon: "power") { NSApplication.shared.terminate(nil) }
 
-    private func openSettings() {
-        if #available(macOS 14.0, *) {
-            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        } else {
-            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
         }
-        NSApp.activate(ignoringOtherApps: true)
     }
 
     // MARK: - Helpers

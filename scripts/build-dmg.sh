@@ -2,7 +2,7 @@
 set -e
 
 APP_NAME="ClaudeMonitor"
-VERSION="1.1.0"
+VERSION="1.1.2"
 DMG_NAME="${APP_NAME}-${VERSION}.dmg"
 SCHEME="ClaudeMonitor"
 

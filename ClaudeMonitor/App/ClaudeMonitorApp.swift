@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var dashboardWindow: NSWindow?
+    private var settingsWindow: NSWindow?
     private let appState = AppState()
     private var cancellable: AnyCancellable?
 
@@ -34,7 +35,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let pop = NSPopover()
         pop.behavior = .transient
-        let menuView = MenuBarView(openDashboard: { [weak self] in self?.openDashboard() })
+        let menuView = MenuBarView(
+            openDashboard: { [weak self] in self?.openDashboard() },
+            openSettings:  { [weak self] in self?.openSettings() }
+        )
             .environmentObject(appState)
         let hc = NSHostingController(rootView: menuView)
         if #available(macOS 13.0, *) {
@@ -47,10 +51,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         cancellable = AnthropicUsageReader.shared.$usage
             .combineLatest(CodexSessionReader.shared.$primaryUsedPercent)
             .combineLatest(CodexSessionReader.shared.$sessions.map { !$0.isEmpty })
+            .combineLatest(appState.$tokenRateLevel)
             .receive(on: RunLoop.main)
-            .sink { [weak self] combined, codexConnected in
+            .sink { [weak self] combined2, rateLevel in
                 guard let self else { return }
-                let (usage, codexUsedPct) = combined
+                let (combined1, codexConnected) = combined2
+                let (usage, codexUsedPct) = combined1
 
                 let claudeRemaining: Double? = usage?.fiveHourRemaining
                 let codexPct: Double? = codexConnected ? codexUsedPct : nil
@@ -60,7 +66,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if claudeRemaining != nil || codexPct != nil {
                     button.image = Self.makeStatusBarImage(
                         claudeRemaining: claudeRemaining,
-                        codexUsedPercent: codexPct
+                        codexUsedPercent: codexPct,
+                        claudeRateLevel: rateLevel
                     )
                     button.imagePosition = .imageOnly
                     button.title = ""
@@ -80,6 +87,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             pop.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             NSApp.activate(ignoringOtherApps: true)
         }
+    }
+
+    private func openSettings() {
+        popover?.performClose(nil)
+        if let w = settingsWindow, w.isVisible {
+            w.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        let w = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 460, height: 320),
+            styleMask: [.titled, .closable],
+            backing: .buffered,
+            defer: false
+        )
+        w.isReleasedWhenClosed = false
+        w.title = "ClaudeMonitor 설정"
+        w.center()
+        w.contentViewController = NSHostingController(rootView: SettingsView())
+        w.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow = w
     }
 
     private func openDashboard() {
@@ -109,8 +138,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Status bar image
 
     /// Two-column mini stat: [Claude / Codex] each with small label on top + big % below.
-    static func makeStatusBarImage(claudeRemaining: Double?, codexUsedPercent: Double?) -> NSImage {
-        let colW: CGFloat = 44
+    /// claudeRateLevel 0–3 draws a stacked bar gauge to the right of the Claude value.
+    static func makeStatusBarImage(claudeRemaining: Double?, codexUsedPercent: Double?,
+                                   claudeRateLevel: Int = 0) -> NSImage {
+        let colW: CGFloat = 50    // wider to fit value + optional gauge bars
         let gap:  CGFloat = 6
         let showClaude = claudeRemaining != nil
         let showCodex  = codexUsedPercent != nil
@@ -128,7 +159,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     value: String(format: "%.0f%%", pct * 100),
                     atX: x, colW: colW, height: height,
                     labelColor: .systemOrange,
-                    valueColor: valColor
+                    valueColor: valColor,
+                    rateLevel: claudeRateLevel
                 )
                 x += colW + gap
             }
@@ -140,7 +172,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     value: String(format: "%.0f%%", usedPct),
                     atX: x, colW: colW, height: height,
                     labelColor: .systemBlue,
-                    valueColor: valColor
+                    valueColor: valColor,
+                    rateLevel: 0
                 )
             }
 
@@ -152,7 +185,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private static func drawStat(label: String, value: String,
                                   atX x: CGFloat, colW: CGFloat, height: CGFloat,
-                                  labelColor: NSColor, valueColor: NSColor) {
+                                  labelColor: NSColor, valueColor: NSColor,
+                                  rateLevel: Int = 0) {
         let labelAttrs: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 7, weight: .semibold),
             .foregroundColor: labelColor
@@ -164,19 +198,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let labelNS = label as NSString
         let valueNS = value as NSString
-
         let labelSz = labelNS.size(withAttributes: labelAttrs)
         let valueSz = valueNS.size(withAttributes: valueAttrs)
 
-        let labelX = x + (colW - labelSz.width) / 2
-        let valueX = x + (colW - valueSz.width) / 2
+        // Gauge bar dimensions (stacked vertically, drawn to the right of value)
+        let barW: CGFloat = 3
+        let barH: CGFloat = 3
+        let barRowGap: CGFloat = 1.5
+        let barSpacing: CGFloat = rateLevel > 0 ? 3 : 0
+        let barAreaW: CGFloat = rateLevel > 0 ? barW : 0
 
-        // label at top, value just below
+        // Center value + bars as a group
+        let groupW = valueSz.width + barSpacing + barAreaW
+        let groupX = x + (colW - groupW) / 2
+        let valueX = groupX
+        let barX = groupX + valueSz.width + barSpacing
+
+        // Label centered independently
+        let labelX = x + (colW - labelSz.width) / 2
         labelNS.draw(at: NSPoint(x: labelX, y: height - labelSz.height + 1), withAttributes: labelAttrs)
         valueNS.draw(at: NSPoint(x: valueX, y: 1), withAttributes: valueAttrs)
+
+        // Stacked bars: bottom=green(1), mid=orange(2), top=red(3)
+        if rateLevel > 0 {
+            let barColors: [NSColor] = [.systemGreen, .systemOrange, .systemRed]
+            for i in 0..<3 {
+                let barY = 1.5 + CGFloat(i) * (barH + barRowGap)
+                let filled = i < rateLevel
+                let color = filled ? barColors[i] : NSColor.secondaryLabelColor.withAlphaComponent(0.15)
+                color.setFill()
+                NSBezierPath(
+                    roundedRect: NSRect(x: barX, y: barY, width: barW, height: barH),
+                    xRadius: 0.5, yRadius: 0.5
+                ).fill()
+            }
+        }
     }
 
-    // MARK: - Fallback icon (Claude C-arc)
+    // MARK: - Icons
+
+    /// Codex icon: rounded terminal window + ">" cursor
+    static func makeCodexIcon() -> NSImage {
+        let sz: CGFloat = 18
+        let img = NSImage(size: NSSize(width: sz, height: sz), flipped: false) { bounds in
+            let cx = bounds.midX, cy = bounds.midY
+
+            // Rounded square outline (terminal window)
+            let rect = NSRect(x: 2.5, y: 2.5, width: sz - 5, height: sz - 5)
+            let box = NSBezierPath(roundedRect: rect, xRadius: 3, yRadius: 3)
+            box.lineWidth = 1.5
+            NSColor.labelColor.setStroke()
+            box.stroke()
+
+            // ">" prompt inside
+            let arrow = NSBezierPath()
+            arrow.move(to: NSPoint(x: cx - 2.5, y: cy + 3))
+            arrow.line(to: NSPoint(x: cx + 2.5, y: cy))
+            arrow.line(to: NSPoint(x: cx - 2.5, y: cy - 3))
+            arrow.lineWidth = 1.5
+            arrow.lineCapStyle = .round
+            NSColor.labelColor.setStroke()
+            arrow.stroke()
+
+            return true
+        }
+        img.isTemplate = true
+        return img
+    }
 
     static func makeClaudeIcon() -> NSImage {
         let sz: CGFloat = 18

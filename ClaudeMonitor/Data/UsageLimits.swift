@@ -29,12 +29,22 @@ final class UsageLimits: ObservableObject {
             }
         }
     }
+    /// 메뉴바에서 Claude 섹션 표시 여부. 기본 true.
+    @Published var claudeEnabled: Bool {
+        didSet { defaults.set(claudeEnabled, forKey: "claude_enabled") }
+    }
+    /// 메뉴바에서 Codex 섹션 표시 여부. 기본 true.
+    @Published var codexEnabled: Bool {
+        didSet { defaults.set(codexEnabled, forKey: "codex_enabled") }
+    }
 
     private init() {
         accountEmail        = defaults.string(forKey: "account_email") ?? ""
         windowLimitTokens   = defaults.integer(forKey: "limit_window_tokens")
         weeklyLimitTokens   = defaults.integer(forKey: "limit_weekly_tokens")
         codexHomePath       = defaults.string(forKey: "codex_home_path") ?? ""
+        claudeEnabled       = defaults.object(forKey: "claude_enabled") as? Bool ?? true
+        codexEnabled        = defaults.object(forKey: "codex_enabled") as? Bool ?? true
     }
 
     func percentRemaining(used: Int, limit: Int) -> Double? {

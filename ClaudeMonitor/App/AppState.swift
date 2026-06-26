@@ -13,6 +13,7 @@ final class AppState: ObservableObject {
     @Published var weeklyProjects: [ProjectSummary] = []
     @Published var weeklyStats: WeeklyStats = WeeklyStats(avgContextSize: 0, opusRatio: 0, avgTokensPerCall: 0)
     @Published var weeklyHourly: [HourlyUsage] = []
+    @Published var tokenRateLevel: Int = 0   // 0 미사용, 1 기본, 2 많음, 3 폭발적
 
     let limits = UsageLimits.shared
     let profiles = ProfileStore.shared
@@ -22,12 +23,14 @@ final class AppState: ObservableObject {
     private var parser: JSONLParser
     private var watcher: FSEventWatcher?
     private var profileCancellable: AnyCancellable?
+    private var tokenHistory: [(date: Date, tokens: Int)] = []
 
     init() {
         let profile = ProfileStore.shared.activeProfile
         self.store = (try? SQLiteStore(profileId: profile?.id)) ?? { fatalError("SQLiteStore init failed") }()
         self.parser = JSONLParser()
         observeProfileChanges()
+        ClaudeCodeHUDConnector.shared.autoRegisterOnFirstLaunch()
         Task { await self.boot(profile: profile) }
     }
 
@@ -126,6 +129,25 @@ final class AppState: ObservableObject {
         weeklyProjects = (try? store.weeklyProjectSummaries()) ?? []
         weeklyStats    = (try? store.weeklyStats()) ?? weeklyStats
         weeklyHourly   = (try? store.weeklyHourlyUsage()) ?? []
+        recordTokenRate()
+    }
+
+    private func recordTokenRate() {
+        let now = Date()
+        tokenHistory.append((date: now, tokens: windowTokens))
+        tokenHistory = tokenHistory.filter { now.timeIntervalSince($0.date) < 180 }
+
+        let oneMinAgo = now.addingTimeInterval(-60)
+        let recent = tokenHistory.filter { $0.date >= oneMinAgo }
+        guard recent.count >= 2, let earliest = recent.min(by: { $0.date < $1.date }) else { return }
+
+        let delta = max(0, windowTokens - earliest.tokens)
+        switch delta {
+        case ..<500:   tokenRateLevel = 0
+        case 500..<3000: tokenRateLevel = 1
+        case 3000..<10000: tokenRateLevel = 2
+        default:       tokenRateLevel = 3
+        }
     }
 
     // Anthropic API data takes priority; falls back to user-configured limits
