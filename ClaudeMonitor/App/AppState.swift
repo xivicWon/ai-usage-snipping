@@ -10,6 +10,7 @@ final class AppState: ObservableObject {
     @Published var weekTokens: Int = 0
     @Published var windowTokens: Int = 0   // last 5 hours
     @Published var dailySummaries: [DailySummary] = []
+    @Published var weeklyProjects: [ProjectSummary] = []
 
     let limits = UsageLimits.shared
     let profiles = ProfileStore.shared
@@ -120,6 +121,7 @@ final class AppState: ObservableObject {
         weekTokens = week.reduce(0) { $0 + $1.totalInputTokens + $1.totalOutputTokens }
         windowTokens = (try? store.tokenUsage(lastHours: 5)) ?? 0
         dailySummaries = (try? store.dailySummaries(days: 30)) ?? []
+        weeklyProjects = (try? store.weeklyProjectSummaries()) ?? []
     }
 
     // Anthropic API data takes priority; falls back to user-configured limits

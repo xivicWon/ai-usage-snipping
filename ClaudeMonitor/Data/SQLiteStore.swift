@@ -2,6 +2,21 @@
 import Foundation
 import GRDB
 
+struct ProjectSummary: FetchableRecord, Identifiable {
+    var id: String { projectPath }
+    var projectPath: String
+    var totalTokens: Int
+
+    var projectName: String {
+        URL(fileURLWithPath: projectPath).lastPathComponent
+    }
+
+    init(row: Row) {
+        projectPath = row["projectPath"]
+        totalTokens = row["totalTokens"]
+    }
+}
+
 struct DailySummary: FetchableRecord, Identifiable {
     var id: String { date }
     var date: String
@@ -112,6 +127,22 @@ final class SQLiteStore {
                 GROUP BY date
                 ORDER BY date DESC
                 """, arguments: ["-\(days) days"])
+        }
+    }
+
+    /// Per-project token usage for the current Mon–Sun week.
+    func weeklyProjectSummaries() throws -> [ProjectSummary] {
+        try dbQueue.read { db in
+            try ProjectSummary.fetchAll(db, sql: """
+                SELECT projectPath,
+                       SUM(inputTokens + outputTokens) AS totalTokens
+                FROM sessionRecord
+                WHERE date >= date('now', 'localtime', 'weekday 0', '-6 days')
+                  AND date <= date('now', 'localtime')
+                GROUP BY projectPath
+                ORDER BY totalTokens DESC
+                LIMIT 20
+                """)
         }
     }
 
