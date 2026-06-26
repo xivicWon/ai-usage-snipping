@@ -2,6 +2,18 @@
 import Foundation
 import GRDB
 
+struct HourlyUsage: FetchableRecord {
+    var dayOfWeek: Int  // 0=Sun, 1=Mon … 6=Sat
+    var hour: Int       // 0–23
+    var tokens: Int
+
+    init(row: Row) {
+        dayOfWeek = Int(row["dayOfWeek"] as? Int64 ?? 0)
+        hour      = Int(row["hour"]      as? Int64 ?? 0)
+        tokens    = Int(row["tokens"]    as? Int64 ?? 0)
+    }
+}
+
 struct ProjectSummary: FetchableRecord, Identifiable {
     var id: String { projectPath }
     var projectPath: String
@@ -150,6 +162,22 @@ final class SQLiteStore {
                 GROUP BY projectPath
                 ORDER BY totalTokens DESC
                 LIMIT 20
+                """)
+        }
+    }
+
+    /// Token usage grouped by day-of-week × hour for the current Mon–Sun week.
+    func weeklyHourlyUsage() throws -> [HourlyUsage] {
+        try dbQueue.read { db in
+            try HourlyUsage.fetchAll(db, sql: """
+                SELECT
+                  CAST(strftime('%w', timestamp, 'localtime') AS INTEGER) AS dayOfWeek,
+                  CAST(strftime('%H', timestamp, 'localtime') AS INTEGER) AS hour,
+                  SUM(inputTokens + outputTokens) AS tokens
+                FROM sessionRecord
+                WHERE date >= date('now', 'localtime', 'weekday 0', '-6 days')
+                  AND date <= date('now', 'localtime')
+                GROUP BY dayOfWeek, hour
                 """)
         }
     }

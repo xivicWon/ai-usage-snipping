@@ -125,6 +125,11 @@ struct DashboardView: View {
 
             Divider()
 
+            // Hourly heatmap
+            hourlyHeatmap
+
+            Divider()
+
             // Weekly project breakdown
             weeklyProjectChart
         }
@@ -159,6 +164,86 @@ struct DashboardView: View {
                 .foregroundStyle(color.opacity(0.8))
         }
         .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Hourly heatmap
+
+    private var hourlyHeatmap: some View {
+        // dayOfWeek: 0=Sun…6=Sat → reorder to Mon(1)…Sun(0)
+        let dayOrder = [1, 2, 3, 4, 5, 6, 0]
+        let dayLabels = ["월", "화", "수", "목", "금", "토", "일"]
+
+        // Build lookup [dayOfWeek][hour] = tokens
+        var grid = Array(repeating: Array(repeating: 0, count: 24), count: 7)
+        for h in appState.weeklyHourly {
+            let d = h.dayOfWeek < 7 ? h.dayOfWeek : 0
+            let hr = h.hour < 24 ? h.hour : 0
+            grid[d][hr] = h.tokens
+        }
+        let maxVal = grid.flatMap { $0 }.max() ?? 1
+
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("시간대별 사용 패턴")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+
+            HStack(alignment: .top, spacing: 4) {
+                // Day labels
+                VStack(alignment: .trailing, spacing: 1) {
+                    Color.clear.frame(height: 10) // hour label spacer
+                    ForEach(0..<7, id: \.self) { i in
+                        Text(dayLabels[i])
+                            .font(.system(size: 8))
+                            .foregroundStyle(.tertiary)
+                            .frame(height: 10)
+                    }
+                }
+
+                // Grid
+                VStack(spacing: 1) {
+                    // Hour labels (every 6h)
+                    HStack(spacing: 0) {
+                        ForEach(0..<24, id: \.self) { h in
+                            Group {
+                                if h % 6 == 0 {
+                                    Text("\(h)")
+                                        .font(.system(size: 7))
+                                        .foregroundStyle(.tertiary)
+                                } else {
+                                    Color.clear
+                                }
+                            }
+                            .frame(width: 14, height: 10, alignment: .leading)
+                        }
+                    }
+
+                    // Cells
+                    ForEach(0..<7, id: \.self) { rowIdx in
+                        let dow = dayOrder[rowIdx]
+                        HStack(spacing: 1) {
+                            ForEach(0..<24, id: \.self) { h in
+                                let val = grid[dow][h]
+                                let intensity = maxVal > 0 ? Double(val) / Double(maxVal) : 0
+                                RoundedRectangle(cornerRadius: 2)
+                                    .fill(cellColor(intensity))
+                                    .frame(width: 14, height: 10)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 10)
+        }
+    }
+
+    private func cellColor(_ intensity: Double) -> Color {
+        if intensity == 0 { return Color.secondary.opacity(0.08) }
+        // blue → orange gradient by intensity
+        return Color(hue: 0.6 - intensity * 0.37, saturation: 0.7, brightness: 0.85)
+            .opacity(0.3 + intensity * 0.7)
     }
 
     // MARK: - Project chart
