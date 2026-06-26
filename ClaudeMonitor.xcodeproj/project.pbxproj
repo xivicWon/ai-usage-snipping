@@ -10,7 +10,9 @@
 		33CCA2E30A0D83ABA8471E95 /* FSEventWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 064D459D72D381E7B595EB7F /* FSEventWatcher.swift */; };
 		471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */; };
 		4B5B9002E14D19F2EA776645 /* ClaudeMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */; };
+		92C8780A17067BCFE01176A1 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46DDDAE35FBBC7D8F01BA11 /* AppState.swift */; };
 		99A742107EC9BCFEE6DE3938 /* JSONLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DDDF5B01814C7620139479 /* JSONLParser.swift */; };
+		A3670779B5D381B44B9E16BF /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB78E9A3A21D02510026017C /* MenuBarView.swift */; };
 		A4279A2AEA51CB504671DF7F /* ClaudeMonitorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20AD9838A3FA57813FE57DE7 /* ClaudeMonitorApp.swift */; };
 		B032D0CE35CD41E134501DB1 /* PricingTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */; };
 		BAD2E0F543A769F0F59DE8E6 /* SQLiteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */; };
@@ -40,10 +42,12 @@
 		4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingTableTests.swift; sourceTree = "<group>"; };
 		93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStoreTests.swift; sourceTree = "<group>"; };
 		9924D1F6FBFD4F220629C2E2 /* ClaudeMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClaudeMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A46DDDAE35FBBC7D8F01BA11 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A694C018F13572E6F47C48F2 /* ClaudeMonitorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeMonitorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStore.swift; sourceTree = "<group>"; };
 		F4F0139049AB7029E72F1BEB /* PricingTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingTable.swift; sourceTree = "<group>"; };
 		F9FAF0667A4500690AC14250 /* ClaudeMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClaudeMonitor.entitlements; sourceTree = "<group>"; };
+		FB78E9A3A21D02510026017C /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -82,6 +86,7 @@
 				01E69CD8161F734BE0624EC4 /* Info.plist */,
 				3228BA8B8EB13F4396A80FD3 /* App */,
 				BB30C17D71D441BDD9E19CA8 /* Data */,
+				54CB1AA4D53D7F09A1517749 /* MenuBar */,
 			);
 			path = ClaudeMonitor;
 			sourceTree = "<group>";
@@ -100,9 +105,18 @@
 		3228BA8B8EB13F4396A80FD3 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				A46DDDAE35FBBC7D8F01BA11 /* AppState.swift */,
 				20AD9838A3FA57813FE57DE7 /* ClaudeMonitorApp.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		54CB1AA4D53D7F09A1517749 /* MenuBar */ = {
+			isa = PBXGroup;
+			children = (
+				FB78E9A3A21D02510026017C /* MenuBarView.swift */,
+			);
+			path = MenuBar;
 			sourceTree = "<group>";
 		};
 		652D67D252F283B04AFEF569 /* Products */ = {
@@ -217,9 +231,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				92C8780A17067BCFE01176A1 /* AppState.swift in Sources */,
 				A4279A2AEA51CB504671DF7F /* ClaudeMonitorApp.swift in Sources */,
 				33CCA2E30A0D83ABA8471E95 /* FSEventWatcher.swift in Sources */,
 				99A742107EC9BCFEE6DE3938 /* JSONLParser.swift in Sources */,
+				A3670779B5D381B44B9E16BF /* MenuBarView.swift in Sources */,
 				D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */,
 				471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */,
 			);
