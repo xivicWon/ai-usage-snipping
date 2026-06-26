@@ -19,58 +19,20 @@ struct ClaudeSession: Identifiable {
     }
 }
 
-struct AccountInfo {
-    var username: String
-    var subscriptionType: String  // e.g. "max"
-
-    var displayPlan: String {
-        switch subscriptionType.lowercased() {
-        case "max": return "Max"
-        case "pro": return "Pro"
-        default: return subscriptionType.capitalized
-        }
-    }
-}
-
 final class SessionReader: ObservableObject {
     static let shared = SessionReader()
 
     @Published private(set) var sessions: [ClaudeSession] = []
-    @Published private(set) var accountInfo: AccountInfo?
 
     private let sessionsURL = URL(fileURLWithPath: NSHomeDirectory())
         .appendingPathComponent(".claude/sessions")
     private var timer: Timer?
 
     private init() {
-        loadAccount()
         reload()
-        // Poll sessions every 10s (no FS events needed — JSON files update on activity)
         timer = Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { [weak self] _ in
             self?.reload()
         }
-    }
-
-    // MARK: - Account
-
-    private func loadAccount() {
-        // Read subscription type from keychain credential blob
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "Claude Code-credentials",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        var result: AnyObject?
-        var sub = ""
-        if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-           let data = result as? Data,
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let oauth = json["claudeAiOauth"] as? [String: Any] {
-            sub = oauth["subscriptionType"] as? String ?? ""
-        }
-        let email = UsageLimits.shared.accountEmail
-        accountInfo = AccountInfo(username: email, subscriptionType: sub)
     }
 
     // MARK: - Sessions
@@ -107,9 +69,6 @@ final class SessionReader: ObservableObject {
 
         DispatchQueue.main.async { self.sessions = loaded }
     }
-
-    /// Call when the user updates their email in settings.
-    func loadAccountPublic() { loadAccount() }
 
     var activeSessions:  [ClaudeSession] { sessions.filter(\.isActive) }
     var idleSessions:    [ClaudeSession] { sessions.filter { !$0.isActive } }

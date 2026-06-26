@@ -31,9 +31,6 @@ struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var usageReader = AnthropicUsageReader.shared
     @ObservedObject private var sessions = SessionReader.shared
-    @ObservedObject private var settings = UsageLimits.shared
-    @State private var editingEmail = false
-    @State private var emailDraft = ""
     let openDashboard: () -> Void
 
     var body: some View {
@@ -54,21 +51,9 @@ struct MenuBarView: View {
             Image(systemName: "sparkle")
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
-            if let plan = sessions.accountInfo?.displayPlan, !plan.isEmpty {
-                Text("Claude")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.primary)
-                Text(plan)
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(Color.purple.opacity(0.75))
-                    .clipShape(Capsule())
-            } else {
-                Text("Claude")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.primary)
-            }
+            Text("Claude")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.primary)
             Spacer()
             HStack(spacing: 3) {
                 Circle()
@@ -81,66 +66,6 @@ struct MenuBarView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-    }
-
-    // MARK: - Account row
-
-    private var accountRow: some View {
-        HStack(spacing: 6) {
-            if editingEmail {
-                TextField("Claude 이메일", text: $emailDraft)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 10))
-                    .onSubmit { saveEmail() }
-                Button("저장", action: saveEmail)
-                    .font(.system(size: 10))
-            } else {
-                Button { emailDraft = settings.accountEmail; editingEmail = true } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                        if settings.accountEmail.isEmpty {
-                            Text("계정 입력...")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.secondary.opacity(0.7))
-                        } else {
-                            Text(settings.accountEmail)
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(.primary)
-                        }
-                        if let sub = sessions.accountInfo?.subscriptionType, !sub.isEmpty {
-                            Text(sessions.accountInfo?.displayPlan ?? "")
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 5).padding(.vertical, 1)
-                                .background(Color.purple.opacity(0.75))
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                HStack(spacing: 3) {
-                    Circle()
-                        .fill(sessions.activeCount > 0 ? Color.green : Color.secondary.opacity(0.35))
-                        .frame(width: 6, height: 6)
-                    Text("\(sessions.activeCount)")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-    }
-
-    private func saveEmail() {
-        settings.accountEmail = emailDraft
-        sessions.loadAccountPublic()
-        editingEmail = false
     }
 
     // MARK: - Usage row (two tanks side by side)
