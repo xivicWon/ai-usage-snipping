@@ -13,6 +13,7 @@ final class AppState: ObservableObject {
 
     let limits = UsageLimits.shared
     let profiles = ProfileStore.shared
+    let anthropicUsage = AnthropicUsageReader.shared
 
     private var store: SQLiteStore
     private var parser: JSONLParser
@@ -121,11 +122,14 @@ final class AppState: ObservableObject {
         dailySummaries = (try? store.dailySummaries(days: 30)) ?? []
     }
 
+    // Anthropic API data takes priority; falls back to user-configured limits
     var windowPercentRemaining: Double? {
-        limits.percentRemaining(used: windowTokens, limit: limits.windowLimitTokens)
+        if let u = anthropicUsage.usage { return u.fiveHourRemaining }
+        return limits.percentRemaining(used: windowTokens, limit: limits.windowLimitTokens)
     }
 
     var weeklyPercentRemaining: Double? {
-        limits.percentRemaining(used: weekTokens, limit: limits.weeklyLimitTokens)
+        if let u = anthropicUsage.usage { return u.weeklyRemaining }
+        return limits.percentRemaining(used: weekTokens, limit: limits.weeklyLimitTokens)
     }
 }

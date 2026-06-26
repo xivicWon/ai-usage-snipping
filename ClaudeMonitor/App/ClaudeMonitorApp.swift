@@ -40,15 +40,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
         popover = pop
 
-        // Update title whenever window-usage or the configured limit changes
-        cancellable = appState.$windowTokens
-            .combineLatest(appState.limits.$windowLimitTokens)
+        // Update title from Anthropic usage cache (real quota %) or token count fallback
+        cancellable = AnthropicUsageReader.shared.$usage
+            .combineLatest(appState.$windowTokens)
             .receive(on: RunLoop.main)
-            .sink { [weak self] tokens, limit in
+            .sink { [weak self] usage, tokens in
                 guard let self else { return }
                 let title: String
-                if let pct = UsageLimits.shared.percentRemaining(used: tokens, limit: limit) {
-                    title = String(format: " %.0f%% 남음", pct * 100)
+                if let u = usage {
+                    title = String(format: " %.0f%% 남음", u.fiveHourRemaining * 100)
                 } else {
                     title = " \(Self.formatTokens(tokens))"
                 }
