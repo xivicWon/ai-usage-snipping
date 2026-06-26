@@ -5,14 +5,47 @@ struct DashboardView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var sessions = SessionReader.shared
     @ObservedObject private var usageReader = AnthropicUsageReader.shared
+    @ObservedObject private var codexReader = CodexSessionReader.shared
+
+    @State private var selectedTool: AITool = .claude
+
+    enum AITool: String, CaseIterable {
+        case claude = "Claude"
+        case codex  = "Codex"
+    }
 
     var body: some View {
-        HSplitView {
-            sessionSidebar
-                .frame(minWidth: 180, maxWidth: 220)
-            usageContent
+        VStack(spacing: 0) {
+            // Tool picker header
+            HStack {
+                Picker("", selection: $selectedTool) {
+                    ForEach(AITool.allCases, id: \.self) { tool in
+                        Text(tool.rawValue).tag(tool)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 200)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(NSColor.windowBackgroundColor))
+
+            Divider()
+
+            if selectedTool == .claude {
+                HSplitView {
+                    sessionSidebar.frame(minWidth: 180, maxWidth: 220)
+                    usageContent
+                }
+            } else {
+                HSplitView {
+                    codexSidebar.frame(minWidth: 180, maxWidth: 220)
+                    codexContent
+                }
+            }
         }
-        .frame(width: 760, height: 480)
+        .frame(width: 760, height: 520)
     }
 
     // MARK: - Session sidebar
@@ -342,5 +375,172 @@ struct DashboardView: View {
         case 1_000..<1_000_000: return String(format: "%.1fK", Double(n)/1_000)
         default: return String(format: "%.1fM", Double(n)/1_000_000)
         }
+    }
+
+    // MARK: - Codex sidebar
+
+    private var codexSidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 0) {
+                statChip(value: "\(codexReader.sessions.filter { isToday($0.startedAt) }.count)",
+                         label: "오늘", color: .blue)
+                statChip(value: fmtTokens(codexReader.weeklyTokens), label: "주간", color: .secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 10)
+
+            Divider()
+
+            Text("세션")
+                .font(.caption2).foregroundStyle(.tertiary).textCase(.uppercase)
+                .padding(.horizontal, 14).padding(.top, 8).padding(.bottom, 4)
+
+            List(codexReader.sessions) { session in
+                codexSessionRow(session)
+                    .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
+            }
+            .listStyle(.sidebar)
+
+            Divider()
+
+            Button { codexReader.reload() } label: {
+                Label("새로고침", systemImage: "arrow.clockwise")
+                    .font(.caption).frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 14).padding(.vertical, 8)
+        }
+    }
+
+    private func codexSessionRow(_ s: CodexSession) -> some View {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "M/d HH:mm"
+        return HStack(spacing: 6) {
+            Circle()
+                .fill(isToday(s.startedAt) ? Color.blue : Color.secondary.opacity(0.3))
+                .frame(width: 7, height: 7)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(s.projectName)
+                    .font(.caption.weight(isToday(s.startedAt) ? .semibold : .regular))
+                    .lineLimit(1)
+                Text(fmtTokens(s.totalTokens) + " · " + fmt.string(from: s.startedAt))
+                    .font(.system(size: 9)).foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    // MARK: - Codex content
+
+    private var codexContent: some View {
+        VStack(spacing: 0) {
+            // Quota card
+            HStack(spacing: 28) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("5시간 사용률")
+                        .font(.caption2).foregroundStyle(.tertiary).textCase(.uppercase)
+                    let pct = codexReader.primaryUsedPercent / 100.0
+                    Text(String(format: "%.0f%%", pct * 100))
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .foregroundStyle(pct < 0.5 ? .green : pct < 0.8 ? .orange : .red)
+                    if let resetsAt = codexReader.primaryResetsAt {
+                        Text(timeUntilLabel(resetsAt))
+                            .font(.system(size: 9)).foregroundStyle(.tertiary)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("오늘 토큰")
+                        .font(.caption2).foregroundStyle(.tertiary).textCase(.uppercase)
+                    Text(fmtTokens(codexReader.todayTokens))
+                        .font(.system(size: 28, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.primary)
+                    Text("주간: \(fmtTokens(codexReader.weeklyTokens))")
+                        .font(.system(size: 9)).foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Divider()
+
+            // Project breakdown
+            codexProjectChart
+        }
+    }
+
+    private var codexProjectChart: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text("최근 7일 프로젝트별 사용량")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(weekRangeLabel())
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 8)
+
+            if codexReader.weeklyProjects.isEmpty {
+                Spacer()
+                Text("데이터 없음").foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                Spacer()
+            } else {
+                let maxTok = codexReader.weeklyProjects.first?.totalTokens ?? 1
+                ScrollView {
+                    VStack(spacing: 6) {
+                        ForEach(codexReader.weeklyProjects) { proj in
+                            codexProjectBar(proj, maxTokens: maxTok)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
+                }
+            }
+        }
+    }
+
+    private func codexProjectBar(_ proj: CodexProjectSummary, maxTokens: Int) -> some View {
+        let ratio = Double(proj.totalTokens) / Double(maxTokens)
+        return HStack(spacing: 8) {
+            Text(proj.projectName)
+                .font(.system(size: 11))
+                .lineLimit(1)
+                .frame(width: 120, alignment: .leading)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3).fill(Color.secondary.opacity(0.1))
+                    RoundedRectangle(cornerRadius: 3).fill(Color.blue.opacity(0.65))
+                        .frame(width: geo.size.width * ratio)
+                }
+            }
+            .frame(height: 14)
+
+            Text(fmtTokens(proj.totalTokens))
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .frame(width: 46, alignment: .trailing)
+
+            Text("\(proj.sessionCount)세션")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+                .frame(width: 48, alignment: .trailing)
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func isToday(_ date: Date) -> Bool {
+        Calendar.current.isDateInToday(date)
+    }
+
+    private func timeUntilLabel(_ date: Date) -> String {
+        let diff = date.timeIntervalSinceNow
+        guard diff > 0 else { return "곧 갱신" }
+        if diff < 3600 { return String(format: "%.0f분 후 갱신", diff / 60) }
+        return String(format: "%.0f시간 후 갱신", diff / 3600)
     }
 }

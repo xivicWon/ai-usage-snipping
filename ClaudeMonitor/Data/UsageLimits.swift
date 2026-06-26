@@ -20,11 +20,21 @@ final class UsageLimits: ObservableObject {
     @Published var weeklyLimitTokens: Int {
         didSet { defaults.set(weeklyLimitTokens, forKey: "limit_weekly_tokens") }
     }
+    @Published var codexHomePath: String {
+        didSet {
+            if codexHomePath.isEmpty {
+                defaults.removeObject(forKey: "codex_home_path")
+            } else {
+                defaults.set(codexHomePath, forKey: "codex_home_path")
+            }
+        }
+    }
 
     private init() {
         accountEmail        = defaults.string(forKey: "account_email") ?? ""
         windowLimitTokens   = defaults.integer(forKey: "limit_window_tokens")
         weeklyLimitTokens   = defaults.integer(forKey: "limit_weekly_tokens")
+        codexHomePath       = defaults.string(forKey: "codex_home_path") ?? ""
     }
 
     func percentRemaining(used: Int, limit: Int) -> Double? {

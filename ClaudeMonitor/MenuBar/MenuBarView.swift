@@ -152,11 +152,29 @@ struct MenuBarView: View {
 
             Divider()
 
+            Button { openSettings() } label: {
+                Label("설정", systemImage: "gear")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12).padding(.vertical, 7)
+
+            Divider()
+
             Button { NSApplication.shared.terminate(nil) } label: {
                 Text("종료").frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 12).padding(.vertical, 7)
         }
+    }
+
+    private func openSettings() {
+        if #available(macOS 14.0, *) {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        } else {
+            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
+        }
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
