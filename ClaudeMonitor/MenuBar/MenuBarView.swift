@@ -1,6 +1,45 @@
 // ClaudeMonitor/MenuBar/MenuBarView.swift
 import SwiftUI
 
+// MARK: - Menu item row (tap gesture — never receives keyboard focus)
+
+struct MenuItemRow: View {
+    let label: String
+    let icon: String?
+    let action: () -> Void
+
+    @State private var isHovered = false
+    @State private var isPressed = false
+
+    var body: some View {
+        Group {
+            if let icon {
+                Label(label, systemImage: icon)
+            } else {
+                Text(label)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(isPressed
+                      ? Color.accentColor.opacity(0.15)
+                      : isHovered ? Color.secondary.opacity(0.08) : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onHover { isHovered = $0 }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { _ in isPressed = true }
+                .onEnded { _ in isPressed = false; action() }
+        )
+        .animation(.easeInOut(duration: 0.08), value: isHovered)
+        .animation(.easeInOut(duration: 0.08), value: isPressed)
+    }
+}
+
 // MARK: - Water tank gauge (vertical, drains from top)
 
 struct WaterTankView: View {
@@ -283,29 +322,11 @@ struct MenuBarView: View {
 
     private var menuButtons: some View {
         VStack(spacing: 0) {
-            Button { openDashboard() } label: {
-                Label("대시보드 열기", systemImage: "chart.bar")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12).padding(.vertical, 7)
-
+            MenuItemRow(label: "대시보드 열기", icon: "chart.bar") { openDashboard() }
             Divider()
-
-            Button { openSettings() } label: {
-                Label("설정", systemImage: "gear")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12).padding(.vertical, 7)
-
+            MenuItemRow(label: "설정", icon: "gear") { openSettings() }
             Divider()
-
-            Button { NSApplication.shared.terminate(nil) } label: {
-                Text("종료").frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12).padding(.vertical, 7)
+            MenuItemRow(label: "종료", icon: nil) { NSApplication.shared.terminate(nil) }
         }
     }
 

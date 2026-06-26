@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem?.button {
             button.image = Self.makeClaudeIcon()
+            button.imagePosition = .imageLeft
             button.title = " --"
             button.action = #selector(togglePopover)
             button.target = self
@@ -42,19 +43,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pop.contentViewController = hc
         popover = pop
 
-        // Update title from Anthropic usage cache (real quota %) or token count fallback
+        // Combine Claude + Codex signals → update status bar item
         cancellable = AnthropicUsageReader.shared.$usage
-            .combineLatest(appState.$windowTokens)
+            .combineLatest(CodexSessionReader.shared.$primaryUsedPercent)
+            .combineLatest(CodexSessionReader.shared.$sessions.map { !$0.isEmpty })
             .receive(on: RunLoop.main)
-            .sink { [weak self] usage, tokens in
+            .sink { [weak self] combined, codexConnected in
                 guard let self else { return }
-                let title: String
-                if let u = usage {
-                    title = String(format: " %.0f%%", u.fiveHourRemaining * 100)
+                let (usage, codexUsedPct) = combined
+
+                let claudeRemaining: Double? = usage?.fiveHourRemaining
+                let codexPct: Double? = codexConnected ? codexUsedPct : nil
+
+                guard let button = self.statusItem?.button else { return }
+
+                if claudeRemaining != nil || codexPct != nil {
+                    button.image = Self.makeStatusBarImage(
+                        claudeRemaining: claudeRemaining,
+                        codexUsedPercent: codexPct
+                    )
+                    button.imagePosition = .imageOnly
+                    button.title = ""
                 } else {
-                    title = " \(Self.formatTokens(tokens))"
+                    button.image = Self.makeClaudeIcon()
+                    button.imagePosition = .imageLeft
+                    button.title = " --"
                 }
-                self.statusItem?.button?.title = title
             }
     }
 
@@ -81,7 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        w.isReleasedWhenClosed = false   // prevent dangling pointer after X button
+        w.isReleasedWhenClosed = false
         w.title = "Claude Monitor"
         w.center()
         w.contentViewController = NSHostingController(
@@ -92,14 +106,84 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dashboardWindow = w
     }
 
-    /// Claude-inspired menu bar icon: C-arc + small sparkle dot.
+    // MARK: - Status bar image
+
+    /// Two-column mini stat: [Claude / Codex] each with small label on top + big % below.
+    static func makeStatusBarImage(claudeRemaining: Double?, codexUsedPercent: Double?) -> NSImage {
+        let colW: CGFloat = 44
+        let gap:  CGFloat = 6
+        let showClaude = claudeRemaining != nil
+        let showCodex  = codexUsedPercent != nil
+        let cols = (showClaude ? 1 : 0) + (showCodex ? 1 : 0)
+        let width = CGFloat(cols) * colW + CGFloat(max(0, cols - 1)) * gap
+        let height: CGFloat = 22
+
+        let img = NSImage(size: NSSize(width: max(width, 30), height: height), flipped: false) { _ in
+            var x: CGFloat = 0
+
+            if let pct = claudeRemaining {
+                let valColor: NSColor = pct >= 0.5 ? .systemGreen : pct >= 0.2 ? .systemOrange : .systemRed
+                Self.drawStat(
+                    label: "Claude",
+                    value: String(format: "%.0f%%", pct * 100),
+                    atX: x, colW: colW, height: height,
+                    labelColor: .systemOrange,
+                    valueColor: valColor
+                )
+                x += colW + gap
+            }
+
+            if let usedPct = codexUsedPercent {
+                let valColor: NSColor = usedPct < 50 ? .systemBlue : usedPct < 80 ? .systemOrange : .systemRed
+                Self.drawStat(
+                    label: "Codex",
+                    value: String(format: "%.0f%%", usedPct),
+                    atX: x, colW: colW, height: height,
+                    labelColor: .systemBlue,
+                    valueColor: valColor
+                )
+            }
+
+            return true
+        }
+        img.isTemplate = false
+        return img
+    }
+
+    private static func drawStat(label: String, value: String,
+                                  atX x: CGFloat, colW: CGFloat, height: CGFloat,
+                                  labelColor: NSColor, valueColor: NSColor) {
+        let labelAttrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.systemFont(ofSize: 7, weight: .semibold),
+            .foregroundColor: labelColor
+        ]
+        let valueAttrs: [NSAttributedString.Key: Any] = [
+            .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .bold),
+            .foregroundColor: valueColor
+        ]
+
+        let labelNS = label as NSString
+        let valueNS = value as NSString
+
+        let labelSz = labelNS.size(withAttributes: labelAttrs)
+        let valueSz = valueNS.size(withAttributes: valueAttrs)
+
+        let labelX = x + (colW - labelSz.width) / 2
+        let valueX = x + (colW - valueSz.width) / 2
+
+        // label at top, value just below
+        labelNS.draw(at: NSPoint(x: labelX, y: height - labelSz.height + 1), withAttributes: labelAttrs)
+        valueNS.draw(at: NSPoint(x: valueX, y: 1), withAttributes: valueAttrs)
+    }
+
+    // MARK: - Fallback icon (Claude C-arc)
+
     static func makeClaudeIcon() -> NSImage {
         let sz: CGFloat = 18
         let img = NSImage(size: NSSize(width: sz, height: sz), flipped: false) { bounds in
             let cx = bounds.midX, cy = bounds.midY
             let r: CGFloat = 7.2
 
-            // Outer C-arc (open right, ~270°)
             let arc = NSBezierPath()
             arc.appendArc(withCenter: NSPoint(x: cx, y: cy),
                           radius: r, startAngle: 45, endAngle: 315, clockwise: false)
@@ -108,7 +192,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSColor.labelColor.setStroke()
             arc.stroke()
 
-            // Three small dots arranged vertically on the open side (right edge) — Claude's "signal bars"
             let dotR: CGFloat = 1.2
             let dotX = cx + r * cos(0 * .pi / 180)
             for (i, dy) in [CGFloat(3), CGFloat(0), CGFloat(-3)].enumerated() {
@@ -121,13 +204,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         img.isTemplate = true
         return img
-    }
-
-    static func formatTokens(_ n: Int) -> String {
-        switch n {
-        case 0..<1_000: return "\(n) tok"
-        case 1_000..<1_000_000: return String(format: "%.1fK tok", Double(n) / 1_000)
-        default: return String(format: "%.1fM tok", Double(n) / 1_000_000)
-        }
     }
 }
