@@ -1,0 +1,69 @@
+@startuml schema
+!theme plain
+skinparam linetype ortho
+skinparam ClassBorderColor #555
+skinparam ClassBackgroundColor #FAFAFA
+
+title ClaudeMonitor — SQLite 스키마 & Swift 모델
+
+class "sessions (SQLite)" as sessions <<table>> {
+    + id : TEXT PK
+    --
+    project_path : TEXT
+    model : TEXT
+    started_at : INTEGER (unix ts)
+    --
+    input_tokens : INTEGER
+    output_tokens : INTEGER
+    cache_read_tokens : INTEGER
+    cache_write_tokens : INTEGER
+    cost_usd : REAL
+}
+
+class "daily_summaries (SQLite)" as daily <<table>> {
+    + date : TEXT PK  ''(YYYY-MM-DD)''
+    --
+    total_cost_usd : REAL
+    total_input_tokens : INTEGER
+    total_output_tokens : INTEGER
+    session_count : INTEGER
+}
+
+class SessionRecord <<Swift Struct>> {
+    id: String
+    projectPath: String
+    model: String
+    startedAt: Date
+    inputTokens: Int
+    outputTokens: Int
+    cacheReadTokens: Int
+    cacheWriteTokens: Int
+    costUSD: Double
+}
+
+class DailySummary <<Swift Struct>> {
+    date: Date
+    totalCostUSD: Double
+    totalInputTokens: Int
+    totalOutputTokens: Int
+    sessionCount: Int
+}
+
+class PricingTable <<Swift Enum>> {
+    case claudeOpus4
+    case claudeSonnet46
+    case claudeHaiku45
+    --
+    inputCostPer1M: Double
+    outputCostPer1M: Double
+    cacheReadPer1M: Double
+    cacheWritePer1M: Double
+    --
+    + cost(input:output:cacheRead:cacheWrite:) -> Double
+}
+
+sessions "1" -- "1" SessionRecord : maps to
+daily "1" -- "1" DailySummary : maps to
+SessionRecord ..> PricingTable : uses
+
+@enduml

@@ -1,0 +1,40 @@
+@startuml architecture
+!theme C4_superhero from <C4/themes>
+!include <C4/C4_Component>
+
+title ClaudeMonitor — 전체 아키텍처
+
+Person(user, "사용자", "맥 사용자")
+
+System_Boundary(app, "ClaudeMonitor.app") {
+
+    Boundary(ui, "UI Layer") {
+        Component(menubar, "MenuBarView", "SwiftUI / NSStatusItem", "메뉴바 아이콘\n오늘 비용 요약 표시")
+        Component(dashboard, "DashboardWindow", "SwiftUI", "상세 대시보드\n차트·프로젝트별 분석")
+    }
+
+    Boundary(state, "State Layer") {
+        Component(appstate, "AppState", "ObservableObject", "UI 바인딩용 @Published 값\n오늘 비용·세션 수·집계 결과")
+    }
+
+    Boundary(data, "Data Layer") {
+        Component(watcher, "FSEventWatcher", "FSEvents API", "~/.claude/projects 감시\n변경된 .jsonl 파일 감지")
+        Component(parser, "JSONLParser", "Swift Codable", "JSONL 파싱\nusage 필드·모델명·타임스탬프 추출")
+        Component(pricing, "PricingTable", "Swift enum", "모델별 단가 테이블\ninput/output/cache per 1M tokens")
+        Component(store, "SQLiteStore", "SQLite (GRDB)", "파싱 결과 영구 저장\n집계 쿼리 제공")
+    }
+}
+
+System_Ext(jsonl, "~/.claude/projects/**/*.jsonl", "Claude Code 로컬 트랜스크립트")
+
+Rel(user, menubar, "메뉴바 클릭")
+Rel(user, dashboard, "대시보드 열기")
+Rel(menubar, appstate, "읽기")
+Rel(dashboard, appstate, "읽기")
+Rel(appstate, store, "집계 쿼리")
+Rel(watcher, jsonl, "FSEvents 감시", "inotify-like")
+Rel(watcher, parser, "변경된 파일 경로 전달")
+Rel(parser, pricing, "모델명으로 단가 조회")
+Rel(parser, store, "SessionRecord INSERT")
+
+@enduml

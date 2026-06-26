@@ -1,0 +1,56 @@
+@startuml dataflow
+!theme plain
+skinparam sequenceMessageAlign center
+skinparam responseMessageBelowArrow true
+skinparam BoxPadding 10
+skinparam ParticipantPadding 20
+
+title ClaudeMonitor — 데이터 흐름 (신규 세션 처리)
+
+box "File System" #LightYellow
+    participant "~/.claude/projects\n/**/*.jsonl" as FS
+end box
+
+box "Data Layer" #LightBlue
+    participant FSEventWatcher as Watcher
+    participant JSONLParser as Parser
+    participant PricingTable as Pricing
+    participant SQLiteStore as DB
+end box
+
+box "State / UI" #LightGreen
+    participant AppState as State
+    participant MenuBarView as Menu
+end box
+
+FS -> Watcher : FSEvent (파일 변경 알림)
+activate Watcher
+Watcher -> Watcher : 신규 offset 계산\n(이미 읽은 줄 제외)
+Watcher -> Parser : readNewLines(file, fromOffset)
+deactivate Watcher
+
+activate Parser
+loop 각 JSONL 줄
+    Parser -> Parser : JSON 디코딩\nassistantMessage.usage 추출
+    Parser -> Pricing : cost(model, inputTokens,\n outputTokens, cacheTokens)
+    activate Pricing
+    Pricing --> Parser : cost: Double (USD)
+    deactivate Pricing
+    Parser -> DB : insert(SessionRecord)
+end
+Parser --> State : didUpdateRecords 이벤트
+deactivate Parser
+
+activate DB
+DB -> DB : 일별 집계 재계산
+DB --> State : DailySummary 업데이트
+deactivate DB
+
+activate State
+State -> State : todayCost, sessionCount 갱신
+State --> Menu : @Published 트리거
+deactivate State
+
+Menu -> Menu : 메뉴바 타이틀 갱신\n"$1.23 today"
+
+@enduml
