@@ -9,8 +9,52 @@ struct MenuBarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Profile picker
-            profileHeader
+            // Compact top row: account chip + source label
+            HStack(spacing: 6) {
+                Menu {
+                    ForEach(profiles.profiles) { p in
+                        Button {
+                            profiles.activate(p.id)
+                        } label: {
+                            HStack {
+                                Text(p.name)
+                                if p.id == profiles.activeProfileId {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: 10))
+                        Text(profiles.activeProfile?.name ?? "기본")
+                            .font(.system(size: 10, weight: .medium))
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 7))
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.primary.opacity(0.07))
+                    .clipShape(Capsule())
+                }
+                .menuStyle(.borderlessButton)
+                .fixedSize()
+
+                Spacer()
+
+                if usageReader.usage != nil {
+                    Text("Anthropic · \(usageReader.cacheAge)")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                } else {
+                    Text("데이터 없음")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.orange)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
 
             Divider()
 
@@ -27,20 +71,6 @@ struct MenuBarView: View {
                     pctRemaining: appState.weeklyPercentRemaining,
                     resetLabel: usageReader.usage?.timeUntilReset(usageReader.usage?.weeklyResetsAt)
                 )
-            }
-
-            if let age = usageReader.usage.map({ _ in usageReader.cacheAge }) {
-                Text("Anthropic 기준 · \(age) 업데이트")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 6)
-            } else {
-                Text("Anthropic 데이터 없음 — OMC 플러그인 필요")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 14)
-                    .padding(.bottom, 6)
             }
 
             Divider()
@@ -62,65 +92,30 @@ struct MenuBarView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
         }
-        .frame(width: 260)
+        .frame(width: 250)
     }
-
-    // MARK: - Profile header
-
-    private var profileHeader: some View {
-        Menu {
-            ForEach(profiles.profiles) { p in
-                Button {
-                    profiles.activate(p.id)
-                } label: {
-                    HStack {
-                        Text(p.name)
-                        if p.id == profiles.activeProfileId {
-                            Image(systemName: "checkmark")
-                        }
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "person.circle")
-                Text(profiles.activeProfile?.name ?? "계정")
-                    .font(.caption.bold())
-                Image(systemName: "chevron.down")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    // MARK: - Usage block
 
     private func usageBlock(label: String, pctRemaining: Double?, resetLabel: String?) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 3) {
             Text(label)
-                .font(.caption2)
+                .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(.tertiary)
                 .textCase(.uppercase)
 
             if let pct = pctRemaining {
                 Text(String(format: "%.0f%%", pct * 100))
-                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .font(.system(size: 19, weight: .bold, design: .monospaced))
                     .foregroundStyle(pctColor(pct))
 
                 Text("남음")
-                    .font(.caption2)
+                    .font(.system(size: 10))
                     .foregroundStyle(.secondary)
 
                 ProgressView(value: pct)
                     .progressViewStyle(.linear)
                     .tint(pctColor(pct))
-                    .frame(width: 100)
-                    .scaleEffect(x: 1, y: 0.8)
+                    .frame(width: 88)
+                    .scaleEffect(x: 1, y: 0.75)
 
                 if let reset = resetLabel {
                     Text(reset)
@@ -129,12 +124,12 @@ struct MenuBarView: View {
                 }
             } else {
                 Text("--")
-                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .font(.system(size: 19, weight: .bold, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
