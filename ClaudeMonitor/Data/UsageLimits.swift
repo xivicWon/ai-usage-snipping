@@ -1,0 +1,29 @@
+// ClaudeMonitor/Data/UsageLimits.swift
+import Foundation
+import Combine
+
+/// User-configured token budgets. Stored in UserDefaults so they survive restarts.
+final class UsageLimits: ObservableObject {
+    static let shared = UsageLimits()
+
+    private let defaults = UserDefaults.standard
+
+    /// Max tokens allowed in the 5-hour rolling window. 0 = not set.
+    @Published var windowLimitTokens: Int {
+        didSet { defaults.set(windowLimitTokens, forKey: "limit_window_tokens") }
+    }
+    /// Max tokens allowed per week. 0 = not set.
+    @Published var weeklyLimitTokens: Int {
+        didSet { defaults.set(weeklyLimitTokens, forKey: "limit_weekly_tokens") }
+    }
+
+    private init() {
+        windowLimitTokens = defaults.integer(forKey: "limit_window_tokens")
+        weeklyLimitTokens = defaults.integer(forKey: "limit_weekly_tokens")
+    }
+
+    func percentRemaining(used: Int, limit: Int) -> Double? {
+        guard limit > 0 else { return nil }
+        return max(0, 1.0 - Double(used) / Double(limit))
+    }
+}

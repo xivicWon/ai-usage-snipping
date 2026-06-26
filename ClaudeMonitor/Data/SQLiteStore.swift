@@ -2,7 +2,8 @@
 import Foundation
 import GRDB
 
-struct DailySummary: FetchableRecord {
+struct DailySummary: FetchableRecord, Identifiable {
+    var id: String { date }
     var date: String
     var totalCostUSD: Double
     var totalInputTokens: Int
@@ -21,17 +22,19 @@ struct DailySummary: FetchableRecord {
 final class SQLiteStore {
     let dbQueue: DatabaseQueue  // internal for test access
 
-    init(path: String = SQLiteStore.defaultPath) throws {
+    init(profileId: UUID? = nil) throws {
+        let path = SQLiteStore.dbPath(for: profileId)
         dbQueue = try DatabaseQueue(path: path)
         try migrate()
     }
 
-    private static var defaultPath: String {
+    static func dbPath(for profileId: UUID?) -> String {
         let dir = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("ClaudeMonitor", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("data.sqlite").path
+        let name = profileId.map { "data-\($0.uuidString).sqlite" } ?? "data.sqlite"
+        return dir.appendingPathComponent(name).path
     }
 
     private func migrate() throws {
@@ -109,6 +112,18 @@ final class SQLiteStore {
                 GROUP BY date
                 ORDER BY date DESC
                 """, arguments: ["-\(days) days"])
+        }
+    }
+
+    /// Total tokens used in the last N hours (rolling window).
+    func tokenUsage(lastHours hours: Int) throws -> Int {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT COALESCE(SUM(inputTokens + outputTokens), 0) AS total
+                FROM sessionRecord
+                WHERE timestamp >= datetime('now', ?)
+                """, arguments: ["-\(hours) hours"])
+            return rows.first.map { Int($0["total"] as Int64) } ?? 0
         }
     }
 }
