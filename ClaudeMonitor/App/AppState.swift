@@ -11,7 +11,7 @@ final class AppState: ObservableObject {
     @Published var windowTokens: Int = 0   // last 5 hours
     @Published var dailySummaries: [DailySummary] = []
     @Published var weeklyProjects: [ProjectSummary] = []
-    @Published var weeklyStats: WeeklyStats = WeeklyStats(cacheHitRate: 0, opusRatio: 0, avgTokensPerCall: 0)
+    @Published var weeklyStats: WeeklyStats = WeeklyStats(avgContextSize: 0, opusRatio: 0, avgTokensPerCall: 0)
     @Published var weeklyHourly: [HourlyUsage] = []
 
     let limits = UsageLimits.shared

@@ -98,11 +98,11 @@ struct DashboardView: View {
             // Efficiency metrics
             HStack(spacing: 0) {
                 efficiencyCard(
-                    title: "캐시 효율",
-                    value: String(format: "%.0f%%", appState.weeklyStats.cacheHitRate * 100),
-                    hint: appState.weeklyStats.cacheHitRate < 0.4 ? "CLAUDE.md 보완 필요" : "양호",
-                    color: appState.weeklyStats.cacheHitRate >= 0.6 ? .green
-                         : appState.weeklyStats.cacheHitRate >= 0.3 ? .orange : .red
+                    title: "컨텍스트 크기",
+                    value: fmtTokens(appState.weeklyStats.avgContextSize),
+                    hint: appState.weeklyStats.avgContextSize > 80_000 ? "컨텍스트 비대" : "정상",
+                    color: appState.weeklyStats.avgContextSize <= 40_000 ? .green
+                         : appState.weeklyStats.avgContextSize <= 80_000 ? .orange : .red
                 )
                 Divider().frame(height: 44)
                 efficiencyCard(
@@ -116,7 +116,7 @@ struct DashboardView: View {
                 efficiencyCard(
                     title: "호출당 토큰",
                     value: fmtTokens(appState.weeklyStats.avgTokensPerCall),
-                    hint: appState.weeklyStats.avgTokensPerCall > 50_000 ? "컨텍스트 비대" : "정상",
+                    hint: appState.weeklyStats.avgTokensPerCall > 50_000 ? "입출력 비대" : "정상",
                     color: appState.weeklyStats.avgTokensPerCall <= 30_000 ? .green
                          : appState.weeklyStats.avgTokensPerCall <= 50_000 ? .orange : .red
                 )
@@ -285,8 +285,8 @@ struct DashboardView: View {
     private func projectBar(_ proj: ProjectSummary, maxTokens: Int) -> some View {
         let ratio = Double(proj.totalTokens) / Double(maxTokens)
         let barColor: Color = ratio > 0.6 ? .orange : .blue
-        let cacheColor: Color = proj.cacheHitRate >= 0.6 ? .green
-                              : proj.cacheHitRate >= 0.3 ? .orange : .red
+        let avg = proj.avgTokensPerCall
+        let avgColor: Color = avg <= 30_000 ? .secondary : avg <= 60_000 ? .orange : .red
 
         return HStack(spacing: 8) {
             Text(proj.projectName)
@@ -310,10 +310,10 @@ struct DashboardView: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 46, alignment: .trailing)
 
-            Text(String(format: "캐시 %.0f%%", proj.cacheHitRate * 100))
+            Text("avg \(fmtTokens(avg))")
                 .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(cacheColor)
-                .frame(width: 52, alignment: .trailing)
+                .foregroundStyle(avgColor)
+                .frame(width: 56, alignment: .trailing)
         }
     }
 

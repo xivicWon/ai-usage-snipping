@@ -33,7 +33,7 @@ struct ProjectSummary: FetchableRecord, Identifiable {
 }
 
 struct WeeklyStats {
-    var cacheHitRate: Double    // 0–1: cacheRead / (input + cacheRead)
+    var avgContextSize: Int     // cacheWriteTokens / calls — context maintained per call
     var opusRatio: Double       // 0–1: opus calls / total calls
     var avgTokensPerCall: Int   // (input+output) per API call
 }
@@ -191,8 +191,7 @@ final class SQLiteStore {
         try dbQueue.read { db in
             let rows = try Row.fetchAll(db, sql: """
                 SELECT
-                  CAST(SUM(cacheReadTokens) AS REAL)
-                    / MAX(SUM(inputTokens + cacheReadTokens), 1)  AS cacheHitRate,
+                  SUM(cacheWriteTokens) / MAX(COUNT(*), 1)        AS avgContextSize,
                   CAST(SUM(CASE WHEN model LIKE '%opus%' THEN 1 ELSE 0 END) AS REAL)
                     / MAX(COUNT(*), 1)                            AS opusRatio,
                   SUM(inputTokens + outputTokens)
@@ -202,12 +201,12 @@ final class SQLiteStore {
                   AND date <= date('now', 'localtime')
                 """)
             guard let row = rows.first else {
-                return WeeklyStats(cacheHitRate: 0, opusRatio: 0, avgTokensPerCall: 0)
+                return WeeklyStats(avgContextSize: 0, opusRatio: 0, avgTokensPerCall: 0)
             }
             return WeeklyStats(
-                cacheHitRate:      row["cacheHitRate"]      as? Double ?? 0,
-                opusRatio:         row["opusRatio"]         as? Double ?? 0,
-                avgTokensPerCall:  Int(row["avgTokensPerCall"] as? Int64 ?? 0)
+                avgContextSize:   Int(row["avgContextSize"]   as? Int64 ?? 0),
+                opusRatio:        row["opusRatio"]            as? Double ?? 0,
+                avgTokensPerCall: Int(row["avgTokensPerCall"] as? Int64 ?? 0)
             )
         }
     }
