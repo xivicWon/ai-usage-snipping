@@ -19,34 +19,13 @@ struct DashboardView: View {
 
     private var sessionSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Account header
-            HStack(spacing: 6) {
-                Image(systemName: "person.circle.fill")
-                    .foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 1) {
-                    let email = UsageLimits.shared.accountEmail
-                    Text(email.isEmpty ? "계정 미설정" : email)
-                        .font(.headline)
-                    if let sub = sessions.accountInfo?.subscriptionType, !sub.isEmpty {
-                        Text((sessions.accountInfo?.displayPlan ?? "") + " 플랜")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 14)
-            .padding(.bottom, 8)
-
-            Divider()
-
             // Session stats
             HStack(spacing: 0) {
                 statChip(value: "\(sessions.activeCount)", label: "활성", color: .green)
                 statChip(value: "\(sessions.idleSessions.count)", label: "대기", color: .secondary)
             }
             .padding(.horizontal, 10)
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
 
             Divider()
 
@@ -66,9 +45,7 @@ struct DashboardView: View {
 
             Divider()
 
-            Button {
-                sessions.reload()
-            } label: {
+            Button { sessions.reload() } label: {
                 Label("새로고침", systemImage: "arrow.clockwise")
                     .font(.caption)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -116,11 +93,12 @@ struct DashboardView: View {
     private var usageContent: some View {
         VStack(spacing: 0) {
             HStack(spacing: 28) {
-                summaryCard(title: "5시간 창", pct: appState.windowPercentRemaining,
+                summaryCard(title: "5시간 창",
+                            pct: appState.windowPercentRemaining,
                             reset: usageReader.usage?.timeUntilReset(usageReader.usage?.fiveHourResetsAt))
-                summaryCard(title: "이번 주", pct: appState.weeklyPercentRemaining,
+                summaryCard(title: "이번 주",
+                            pct: appState.weeklyPercentRemaining,
                             reset: usageReader.usage?.timeUntilReset(usageReader.usage?.weeklyResetsAt))
-                summaryCard(title: "오늘 비용", pct: nil, cost: appState.todayCostUSD, reset: nil)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -143,9 +121,6 @@ struct DashboardView: View {
                     TableColumn("합계") { row in
                         Text(fmt(row.totalInputTokens + row.totalOutputTokens)).monospacedDigit().bold()
                     }.width(80)
-                    TableColumn("비용") { row in
-                        Text(row.totalCostUSD.formatted(.currency(code: "USD"))).monospacedDigit()
-                    }.width(80)
                     TableColumn("세션") { row in
                         Text("\(row.sessionCount)").monospacedDigit()
                     }.width(45)
@@ -154,7 +129,7 @@ struct DashboardView: View {
         }
     }
 
-    private func summaryCard(title: String, pct: Double?, cost: Double? = nil, reset: String?) -> some View {
+    private func summaryCard(title: String, pct: Double?, reset: String?) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
                 .font(.caption2)
@@ -164,10 +139,9 @@ struct DashboardView: View {
                 Text(String(format: "%.0f%%", pct * 100))
                     .font(.system(size: 28, weight: .bold, design: .monospaced))
                     .foregroundStyle(pctColor(pct))
-                if let r = reset { Text(r).font(.system(size: 9)).foregroundStyle(.tertiary) }
-            } else if let cost {
-                Text(cost.formatted(.currency(code: "USD")))
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                if let r = reset {
+                    Text(r).font(.system(size: 9)).foregroundStyle(.tertiary)
+                }
             }
         }
     }
