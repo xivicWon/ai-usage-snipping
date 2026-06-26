@@ -62,16 +62,17 @@ final class SessionReader: ObservableObject {
             kSecMatchLimit as String: kSecMatchLimitOne
         ]
         var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let oauth = json["claudeAiOauth"] as? [String: Any]
-        else {
-            accountInfo = AccountInfo(username: NSUserName(), subscriptionType: "")
-            return
+        var sub = ""
+        if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+           let data = result as? Data,
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let oauth = json["claudeAiOauth"] as? [String: Any] {
+            sub = oauth["subscriptionType"] as? String ?? ""
         }
-        let sub = oauth["subscriptionType"] as? String ?? ""
-        accountInfo = AccountInfo(username: NSUserName(), subscriptionType: sub)
+        // Email comes from user-configured setting (Anthropic has no public profile API)
+        let email = UsageLimits.shared.accountEmail
+        let display = email.isEmpty ? NSUserName() : email
+        accountInfo = AccountInfo(username: display, subscriptionType: sub)
     }
 
     // MARK: - Sessions
@@ -108,6 +109,9 @@ final class SessionReader: ObservableObject {
 
         DispatchQueue.main.async { self.sessions = loaded }
     }
+
+    /// Call when the user updates their email in settings.
+    func loadAccountPublic() { loadAccount() }
 
     var activeSessions:  [ClaudeSession] { sessions.filter(\.isActive) }
     var idleSessions:    [ClaudeSession] { sessions.filter { !$0.isActive } }

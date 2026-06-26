@@ -5,42 +5,67 @@ struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var usageReader = AnthropicUsageReader.shared
     @ObservedObject private var sessions = SessionReader.shared
+    @ObservedObject private var settings = UsageLimits.shared
+    @State private var editingEmail = false
+    @State private var emailDraft = ""
     let openDashboard: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Account + session count row
             HStack(spacing: 8) {
-                // Account chip
-                HStack(spacing: 4) {
-                    Image(systemName: "person.circle.fill")
+                if editingEmail {
+                    TextField("이메일 입력", text: $emailDraft)
+                        .textFieldStyle(.roundedBorder)
                         .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                    if let acct = sessions.accountInfo {
-                        Text(acct.username)
-                            .font(.system(size: 10, weight: .semibold))
-                        if !acct.subscriptionType.isEmpty {
-                            Text(acct.displayPlan)
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 1)
-                                .background(Color.purple.opacity(0.8))
-                                .clipShape(Capsule())
+                        .onSubmit {
+                            settings.accountEmail = emailDraft
+                            sessions.loadAccountPublic()
+                            editingEmail = false
+                        }
+                    Button("저장") {
+                        settings.accountEmail = emailDraft
+                        sessions.loadAccountPublic()
+                        editingEmail = false
+                    }
+                    .font(.system(size: 10))
+                } else {
+                    Button {
+                        emailDraft = settings.accountEmail
+                        editingEmail = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "person.circle.fill")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                            if let acct = sessions.accountInfo {
+                                Text(acct.username)
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundStyle(.primary)
+                                if !acct.subscriptionType.isEmpty {
+                                    Text(acct.displayPlan)
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(Color.purple.opacity(0.8))
+                                        .clipShape(Capsule())
+                                }
+                            }
                         }
                     }
-                }
+                    .buttonStyle(.plain)
 
-                Spacer()
+                    Spacer()
 
-                // Active session badge
-                HStack(spacing: 3) {
-                    Circle()
-                        .fill(sessions.activeCount > 0 ? Color.green : Color.secondary.opacity(0.4))
-                        .frame(width: 6, height: 6)
-                    Text("\(sessions.activeCount) 세션")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 3) {
+                        Circle()
+                            .fill(sessions.activeCount > 0 ? Color.green : Color.secondary.opacity(0.4))
+                            .frame(width: 6, height: 6)
+                        Text("\(sessions.activeCount) 세션")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .padding(.horizontal, 12)

@@ -2,12 +2,16 @@
 import Foundation
 import Combine
 
-/// User-configured token budgets. Stored in UserDefaults so they survive restarts.
+/// User-configured settings. Stored in UserDefaults so they survive restarts.
 final class UsageLimits: ObservableObject {
     static let shared = UsageLimits()
 
     private let defaults = UserDefaults.standard
 
+    /// Claude account email — entered manually since Anthropic has no public profile API.
+    @Published var accountEmail: String {
+        didSet { defaults.set(accountEmail, forKey: "account_email") }
+    }
     /// Max tokens allowed in the 5-hour rolling window. 0 = not set.
     @Published var windowLimitTokens: Int {
         didSet { defaults.set(windowLimitTokens, forKey: "limit_window_tokens") }
@@ -18,8 +22,9 @@ final class UsageLimits: ObservableObject {
     }
 
     private init() {
-        windowLimitTokens = defaults.integer(forKey: "limit_window_tokens")
-        weeklyLimitTokens = defaults.integer(forKey: "limit_weekly_tokens")
+        accountEmail        = defaults.string(forKey: "account_email") ?? ""
+        windowLimitTokens   = defaults.integer(forKey: "limit_window_tokens")
+        weeklyLimitTokens   = defaults.integer(forKey: "limit_weekly_tokens")
     }
 
     func percentRemaining(used: Int, limit: Int) -> Double? {
