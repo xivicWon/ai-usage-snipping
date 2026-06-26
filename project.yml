@@ -1,0 +1,54 @@
+name: ClaudeMonitor
+options:
+  bundleIdPrefix: com.wonjaeho
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+
+packages:
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "6.0.0"
+
+targets:
+  ClaudeMonitor:
+    type: application
+    platform: macOS
+    sources:
+      - ClaudeMonitor
+    dependencies:
+      - package: GRDB
+        product: GRDB
+    info:
+      path: ClaudeMonitor/Info.plist
+      properties:
+        CFBundleName: ClaudeMonitor
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        LSUIElement: true
+        NSHumanReadableDescription: Claude Code usage monitor
+    entitlements:
+      path: ClaudeMonitor/ClaudeMonitor.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.wonjaeho.ClaudeMonitor
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        SWIFT_VERSION: "5.9"
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+
+  ClaudeMonitorTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - ClaudeMonitorTests
+    dependencies:
+      - target: ClaudeMonitor
+      - package: GRDB
+        product: GRDB
+    settings:
+      base:
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        SWIFT_VERSION: "5.9"
