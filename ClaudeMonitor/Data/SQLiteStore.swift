@@ -19,14 +19,16 @@ struct ProjectSummary: FetchableRecord, Identifiable {
     var projectPath: String
     var totalTokens: Int
     var recordCount: Int
+    var cacheHitRate: Double  // SUM(cacheRead) / SUM(input + cacheRead)
 
     var projectName: String { URL(fileURLWithPath: projectPath).lastPathComponent }
     var avgTokensPerCall: Int { recordCount > 0 ? totalTokens / recordCount : 0 }
 
     init(row: Row) {
-        projectPath   = row["projectPath"]
-        totalTokens   = row["totalTokens"]
-        recordCount   = row["recordCount"]
+        projectPath  = row["projectPath"]
+        totalTokens  = row["totalTokens"]
+        recordCount  = row["recordCount"]
+        cacheHitRate = row["cacheHitRate"] as? Double ?? 0
     }
 }
 
@@ -154,8 +156,10 @@ final class SQLiteStore {
         try dbQueue.read { db in
             try ProjectSummary.fetchAll(db, sql: """
                 SELECT projectPath,
-                       SUM(inputTokens + outputTokens) AS totalTokens,
-                       COUNT(*)                         AS recordCount
+                       SUM(inputTokens + outputTokens)    AS totalTokens,
+                       COUNT(*)                            AS recordCount,
+                       CAST(SUM(cacheReadTokens) AS REAL)
+                         / MAX(SUM(inputTokens + cacheReadTokens), 1) AS cacheHitRate
                 FROM sessionRecord
                 WHERE date >= date('now', 'localtime', 'weekday 0', '-6 days')
                   AND date <= date('now', 'localtime')

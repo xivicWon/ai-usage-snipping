@@ -285,12 +285,14 @@ struct DashboardView: View {
     private func projectBar(_ proj: ProjectSummary, maxTokens: Int) -> some View {
         let ratio = Double(proj.totalTokens) / Double(maxTokens)
         let barColor: Color = ratio > 0.6 ? .orange : .blue
+        let cacheColor: Color = proj.cacheHitRate >= 0.6 ? .green
+                              : proj.cacheHitRate >= 0.3 ? .orange : .red
 
         return HStack(spacing: 8) {
             Text(proj.projectName)
                 .font(.system(size: 11))
                 .lineLimit(1)
-                .frame(width: 140, alignment: .leading)
+                .frame(width: 120, alignment: .leading)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -306,6 +308,11 @@ struct DashboardView: View {
             Text(fmtTokens(proj.totalTokens))
                 .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(.secondary)
+                .frame(width: 46, alignment: .trailing)
+
+            Text(String(format: "캐시 %.0f%%", proj.cacheHitRate * 100))
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(cacheColor)
                 .frame(width: 52, alignment: .trailing)
         }
     }
