@@ -1,7 +1,7 @@
 {
   "tool_name": "Read",
-  "tool_input_preview": "{\"file_path\":\"/Users/wonjaeho/.claude/projects/-Users-wonjaeho-Workspace-claude-monitor/memory/MEMORY.md\"}",
-  "error": "File does not exist. Note: your current working directory is /Users/wonjaeho/Workspace/claude-monitor.",
-  "timestamp": "2026-06-26T06:57:20.580Z",
-  "retry_count": 3
+  "tool_input_preview": "{\"file_path\":\"/Users/wonjaeho/Workspace/claude-monitor\"}",
+  "error": "EISDIR: illegal operation on a directory, read '/Users/wonjaeho/Workspace/claude-monitor'",
+  "timestamp": "2026-06-26T07:58:29.891Z",
+  "retry_count": 1
 }

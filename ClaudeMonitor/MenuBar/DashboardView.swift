@@ -20,24 +20,23 @@ struct DashboardView: View {
     private var sessionSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Account header
-            if let acct = sessions.accountInfo {
-                HStack(spacing: 6) {
-                    Image(systemName: "person.circle.fill")
-                        .foregroundStyle(.secondary)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(acct.username)
-                            .font(.headline)
-                        if !acct.subscriptionType.isEmpty {
-                            Text(acct.displayPlan + " 플랜")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+            HStack(spacing: 6) {
+                Image(systemName: "person.circle.fill")
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 1) {
+                    let email = UsageLimits.shared.accountEmail
+                    Text(email.isEmpty ? "계정 미설정" : email)
+                        .font(.headline)
+                    if let sub = sessions.accountInfo?.subscriptionType, !sub.isEmpty {
+                        Text((sessions.accountInfo?.displayPlan ?? "") + " 플랜")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 14)
-                .padding(.bottom, 8)
             }
+            .padding(.horizontal, 14)
+            .padding(.top, 14)
+            .padding(.bottom, 8)
 
             Divider()
 
@@ -165,8 +164,6 @@ struct DashboardView: View {
                 Text(String(format: "%.0f%%", pct * 100))
                     .font(.system(size: 28, weight: .bold, design: .monospaced))
                     .foregroundStyle(pctColor(pct))
-                Text("남음")
-                    .font(.caption2).foregroundStyle(.secondary)
                 if let r = reset { Text(r).font(.system(size: 9)).foregroundStyle(.tertiary) }
             } else if let cost {
                 Text(cost.formatted(.currency(code: "USD")))

@@ -69,10 +69,8 @@ final class SessionReader: ObservableObject {
            let oauth = json["claudeAiOauth"] as? [String: Any] {
             sub = oauth["subscriptionType"] as? String ?? ""
         }
-        // Email comes from user-configured setting (Anthropic has no public profile API)
         let email = UsageLimits.shared.accountEmail
-        let display = email.isEmpty ? NSUserName() : email
-        accountInfo = AccountInfo(username: display, subscriptionType: sub)
+        accountInfo = AccountInfo(username: email, subscriptionType: sub)
     }
 
     // MARK: - Sessions

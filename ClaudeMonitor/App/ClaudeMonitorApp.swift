@@ -48,7 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self else { return }
                 let title: String
                 if let u = usage {
-                    title = String(format: " %.0f%% 남음", u.fiveHourRemaining * 100)
+                    title = String(format: " %.0f%%", u.fiveHourRemaining * 100)
                 } else {
                     title = " \(Self.formatTokens(tokens))"
                 }

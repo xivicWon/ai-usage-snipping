@@ -1,6 +1,32 @@
 // ClaudeMonitor/MenuBar/MenuBarView.swift
 import SwiftUI
 
+// MARK: - Water tank gauge (vertical, drains from top)
+
+struct WaterTankView: View {
+    let pct: Double   // 0.0–1.0 remaining
+    let color: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color.secondary.opacity(0.1))
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(color.opacity(0.8))
+                    .frame(height: geo.size.height * pct)
+                    .animation(.easeInOut(duration: 0.6), value: pct)
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 5)
+                .strokeBorder(Color.secondary.opacity(0.25), lineWidth: 1)
+        )
+    }
+}
+
+// MARK: - Main view
+
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var usageReader = AnthropicUsageReader.shared
@@ -12,140 +38,125 @@ struct MenuBarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Account + session count row
-            HStack(spacing: 8) {
-                if editingEmail {
-                    TextField("이메일 입력", text: $emailDraft)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 10))
-                        .onSubmit {
-                            settings.accountEmail = emailDraft
-                            sessions.loadAccountPublic()
-                            editingEmail = false
-                        }
-                    Button("저장") {
-                        settings.accountEmail = emailDraft
-                        sessions.loadAccountPublic()
-                        editingEmail = false
-                    }
-                    .font(.system(size: 10))
-                } else {
-                    Button {
-                        emailDraft = settings.accountEmail
-                        editingEmail = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.secondary)
-                            if let acct = sessions.accountInfo {
-                                Text(acct.username)
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundStyle(.primary)
-                                if !acct.subscriptionType.isEmpty {
-                                    Text(acct.displayPlan)
-                                        .font(.system(size: 9, weight: .medium))
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 5)
-                                        .padding(.vertical, 1)
-                                        .background(Color.purple.opacity(0.8))
-                                        .clipShape(Capsule())
-                                }
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-
-                    Spacer()
-
-                    HStack(spacing: 3) {
-                        Circle()
-                            .fill(sessions.activeCount > 0 ? Color.green : Color.secondary.opacity(0.4))
-                            .frame(width: 6, height: 6)
-                        Text("\(sessions.activeCount) 세션")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-
+            accountRow
             Divider()
-
-            // Usage blocks
-            HStack(spacing: 0) {
-                usageBlock(
-                    label: "5시간 창",
-                    pctRemaining: appState.windowPercentRemaining,
-                    resetLabel: usageReader.usage?.timeUntilReset(usageReader.usage?.fiveHourResetsAt)
-                )
-                Divider()
-                usageBlock(
-                    label: "이번 주",
-                    pctRemaining: appState.weeklyPercentRemaining,
-                    resetLabel: usageReader.usage?.timeUntilReset(usageReader.usage?.weeklyResetsAt)
-                )
-            }
-
+            usageRow
             Divider()
-
-            Button { openDashboard() } label: {
-                Label("대시보드 열기", systemImage: "chart.bar")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-
-            Divider()
-
-            Button { NSApplication.shared.terminate(nil) } label: {
-                Text("종료").frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
+            menuButtons
         }
-        .frame(width: 250)
+        .frame(width: 240)
     }
 
-    private func usageBlock(label: String, pctRemaining: Double?, resetLabel: String?) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
+    // MARK: - Account row
+
+    private var accountRow: some View {
+        HStack(spacing: 6) {
+            if editingEmail {
+                TextField("Claude 이메일", text: $emailDraft)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 10))
+                    .onSubmit { saveEmail() }
+                Button("저장", action: saveEmail)
+                    .font(.system(size: 10))
+            } else {
+                Button { emailDraft = settings.accountEmail; editingEmail = true } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "person.circle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        if settings.accountEmail.isEmpty {
+                            Text("계정 입력...")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary.opacity(0.7))
+                        } else {
+                            Text(settings.accountEmail)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.primary)
+                        }
+                        if let sub = sessions.accountInfo?.subscriptionType, !sub.isEmpty {
+                            Text(sessions.accountInfo?.displayPlan ?? "")
+                                .font(.system(size: 8, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(Color.purple.opacity(0.75))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                HStack(spacing: 3) {
+                    Circle()
+                        .fill(sessions.activeCount > 0 ? Color.green : Color.secondary.opacity(0.35))
+                        .frame(width: 6, height: 6)
+                    Text("\(sessions.activeCount)")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+    }
+
+    private func saveEmail() {
+        settings.accountEmail = emailDraft
+        sessions.loadAccountPublic()
+        editingEmail = false
+    }
+
+    // MARK: - Usage row (two tanks side by side)
+
+    private var usageRow: some View {
+        HStack(spacing: 0) {
+            tankBlock(
+                label: "5시간 창",
+                pct: appState.windowPercentRemaining,
+                reset: usageReader.usage?.timeUntilReset(usageReader.usage?.fiveHourResetsAt)
+            )
+            Divider()
+            tankBlock(
+                label: "이번 주",
+                pct: appState.weeklyPercentRemaining,
+                reset: usageReader.usage?.timeUntilReset(usageReader.usage?.weeklyResetsAt)
+            )
+        }
+        .padding(.vertical, 10)
+    }
+
+    private func tankBlock(label: String, pct: Double?, reset: String?) -> some View {
+        VStack(spacing: 5) {
             Text(label)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(.tertiary)
                 .textCase(.uppercase)
 
-            if let pct = pctRemaining {
+            if let pct {
+                WaterTankView(pct: pct, color: pctColor(pct))
+                    .frame(width: 32, height: 52)
+
                 Text(String(format: "%.0f%%", pct * 100))
-                    .font(.system(size: 19, weight: .bold, design: .monospaced))
+                    .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .foregroundStyle(pctColor(pct))
 
-                Text("남음")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.secondary)
-
-                ProgressView(value: pct)
-                    .progressViewStyle(.linear)
-                    .tint(pctColor(pct))
-                    .frame(width: 88)
-                    .scaleEffect(x: 1, y: 0.75)
-
-                if let reset = resetLabel {
+                if let reset {
                     Text(reset)
-                        .font(.system(size: 9))
+                        .font(.system(size: 8))
                         .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
                 }
             } else {
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color.secondary.opacity(0.1))
+                    .frame(width: 32, height: 52)
                 Text("--")
-                    .font(.system(size: 19, weight: .bold, design: .monospaced))
+                    .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
     }
 
     private func pctColor(_ pct: Double) -> Color {
@@ -153,6 +164,27 @@ struct MenuBarView: View {
         case 0.5...: return .green
         case 0.2..<0.5: return .orange
         default: return .red
+        }
+    }
+
+    // MARK: - Buttons
+
+    private var menuButtons: some View {
+        VStack(spacing: 0) {
+            Button { openDashboard() } label: {
+                Label("대시보드 열기", systemImage: "chart.bar")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12).padding(.vertical, 7)
+
+            Divider()
+
+            Button { NSApplication.shared.terminate(nil) } label: {
+                Text("종료").frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12).padding(.vertical, 7)
         }
     }
 }
