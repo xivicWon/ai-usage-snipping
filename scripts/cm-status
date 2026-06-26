@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# cm-status — headless Claude Monitor status
+# Usage: cm-status [--json]
+
+DB="$HOME/Library/Application Support/ClaudeMonitor/active.sqlite"
+
+if [ ! -f "$DB" ]; then
+  echo "error: Claude Monitor DB not found. Start the app once to initialize." >&2
+  exit 1
+fi
+
+if [ "$1" = "--json" ]; then
+  sqlite3 -json "$DB" "
+    SELECT
+      (SELECT COALESCE(SUM(inputTokens+outputTokens),0)
+       FROM sessionRecord WHERE timestamp >= datetime('now','-5 hours'))  AS window_tokens,
+      (SELECT COALESCE(SUM(inputTokens+outputTokens),0)
+       FROM sessionRecord WHERE date >= date('now','localtime','-7 days')) AS week_tokens,
+      (SELECT COALESCE(SUM(inputTokens+outputTokens),0)
+       FROM sessionRecord WHERE date  = date('now','localtime'))          AS today_tokens,
+      (SELECT COALESCE(SUM(costUSD),0)
+       FROM sessionRecord WHERE date  = date('now','localtime'))          AS today_cost_usd;
+  "
+else
+  sqlite3 "$DB" "
+    SELECT
+      '5h  window : ' || printf('%9d', COALESCE(SUM(inputTokens+outputTokens),0)) || ' tokens'
+    FROM sessionRecord WHERE timestamp >= datetime('now','-5 hours')
+    UNION ALL
+    SELECT
+      'This week  : ' || printf('%9d', COALESCE(SUM(inputTokens+outputTokens),0)) || ' tokens'
+    FROM sessionRecord WHERE date >= date('now','localtime','-7 days')
+    UNION ALL
+    SELECT
+      'Today      : ' || printf('%9d', COALESCE(SUM(inputTokens+outputTokens),0)) ||
+      ' tokens  (\$' || printf('%.4f', COALESCE(SUM(costUSD),0)) || ')'
+    FROM sessionRecord WHERE date = date('now','localtime');
+  "
+fi

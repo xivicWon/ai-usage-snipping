@@ -52,9 +52,22 @@ final class AppState: ObservableObject {
     }
 
     private func boot(profile: Profile?) async {
+        updateActiveSymlink(for: profile)
         await scanAll(projectsURL: profile?.projectsURL ?? Self.defaultProjectsURL)
         await refresh()
         startWatching(projectsURL: profile?.projectsURL ?? Self.defaultProjectsURL)
+    }
+
+    /// Keeps ~/Library/Application Support/ClaudeMonitor/active.sqlite pointing at
+    /// the current profile's DB so external tools can query a stable path.
+    private func updateActiveSymlink(for profile: Profile?) {
+        let dir = FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ClaudeMonitor")
+        let link = dir.appendingPathComponent("active.sqlite").path
+        let target = SQLiteStore.dbPath(for: profile?.id)
+        try? FileManager.default.removeItem(atPath: link)
+        try? FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: target)
     }
 
     private static var defaultProjectsURL: URL {

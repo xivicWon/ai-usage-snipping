@@ -131,9 +131,9 @@ struct MenuBarView: View {
             } else {
                 Text(formatTokens(tokens))
                     .font(.title3.monospacedDigit().bold())
-                Text("한도 미설정")
+                Text("← 한도 설정 필요")
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.blue.opacity(0.8))
             }
         }
     }
