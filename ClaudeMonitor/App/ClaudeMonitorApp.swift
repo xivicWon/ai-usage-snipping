@@ -79,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
+        w.isReleasedWhenClosed = false   // prevent dangling pointer after X button
         w.title = "Claude Monitor"
         w.center()
         w.contentViewController = NSHostingController(
