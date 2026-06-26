@@ -188,20 +188,49 @@ private struct HUDConnectionSections: View {
                         .foregroundStyle(tierColor)
                 }
 
-                connectActions
-
                 if connector.isRegistered {
-                    Picker("HUD 스타일", selection: $connector.hudStyle) {
-                        ForEach(ClaudeCodeHUDConnector.availableStyles, id: \.id) { s in
-                            Text(s.label).tag(s.id)
+                    // 표시 옵션 — 독립 축 (다음 렌더에 즉시 반영)
+                    Picker("아이콘", selection: $connector.hudEmoji) {
+                        Text("이모지").tag(true)
+                        Text("플레인").tag(false)
+                    }.pickerStyle(.segmented)
+                    Picker("배경", selection: $connector.hudFilled) {
+                        Text("채움").tag(true)
+                        Text("비움").tag(false)
+                    }.pickerStyle(.segmented)
+                    Picker("배치", selection: $connector.hudMultiline) {
+                        Text("행분리").tag(true)
+                        Text("인라인").tag(false)
+                    }.pickerStyle(.segmented)
+
+                    // 표시 항목 — 체크박스
+                    Text("표시 항목")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading),
+                                        GridItem(.flexible(), alignment: .leading)], spacing: 2) {
+                        ForEach(ClaudeCodeHUDConnector.availableFields, id: \.id) { f in
+                            Toggle(f.label, isOn: Binding(
+                                get: { connector.hudFields.contains(f.id) },
+                                set: { on in
+                                    if on { connector.hudFields.insert(f.id) }
+                                    else { connector.hudFields.remove(f.id) }
+                                }))
+                            .toggleStyle(.checkbox)
+                            .font(.system(size: 11))
                         }
                     }
+
                     Button(role: .destructive) {
                         do { try connector.unregister(); reader.reload(); errorMessage = nil; statusMessage = nil }
                         catch { errorMessage = error.localizedDescription }
                     } label: {
                         Label("연결 해제", systemImage: "minus.circle")
                     }
+                } else {
+                    // 미연결 — 연결 액션(자동 분석 / 고급 HUD 설치)
+                    connectActions
                 }
 
                 if let msg = statusMessage {

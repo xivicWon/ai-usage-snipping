@@ -26,20 +26,28 @@ final class ClaudeCodeHUDConnector: ObservableObject {
     @Published private(set) var linkState: HUDLinkState = .empty
     /// 우리 HUD 의 표시 스타일. 변경 시 ~/.claudemonitor/hud-style 에 즉시 기록되어
     /// 다음 렌더부터 반영된다(재등록 불필요).
-    @Published var hudStyle: String = UserDefaults.standard.string(forKey: "hudStyle") ?? "full" {
-        didSet {
-            UserDefaults.standard.set(hudStyle, forKey: "hudStyle")
-            try? writeStyleFile()
-        }
+    // HUD 표시 옵션 — 독립 축. 변경 시 hud-opts.json 에 즉시 기록(다음 렌더 반영).
+    @Published var hudEmoji: Bool = UserDefaults.standard.object(forKey: "hudEmoji") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(hudEmoji, forKey: "hudEmoji"); try? writeOptsFile() }
+    }
+    @Published var hudFilled: Bool = UserDefaults.standard.object(forKey: "hudFilled") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(hudFilled, forKey: "hudFilled"); try? writeOptsFile() }
+    }
+    @Published var hudMultiline: Bool = UserDefaults.standard.object(forKey: "hudMultiline") as? Bool ?? false {
+        didSet { UserDefaults.standard.set(hudMultiline, forKey: "hudMultiline"); try? writeOptsFile() }
+    }
+    /// 표시할 항목들 (체크박스 선택)
+    @Published var hudFields: Set<String> =
+        Set(UserDefaults.standard.stringArray(forKey: "hudFields") ?? ClaudeCodeHUDConnector.defaultFields) {
+        didSet { UserDefaults.standard.set(Array(hudFields), forKey: "hudFields"); try? writeOptsFile() }
     }
 
-    /// 선택 가능한 스타일: (식별자, 한글 라벨)
-    static let availableStyles: [(id: String, label: String)] = [
-        ("full", "전체"),
-        ("compact", "컴팩트"),
-        ("minimal", "미니멀"),
-        ("dev", "개발"),
-        ("rate", "사용량만")
+    static let defaultFields = ["ver", "model", "action", "sid", "ctx", "5h", "wk", "git", "tool", "agent", "cost"]
+    /// 체크박스로 선택 가능한 표시 항목: (식별자, 한글 라벨) — 표시 순서
+    static let availableFields: [(id: String, label: String)] = [
+        ("ver", "CC 버전"), ("model", "모델"), ("action", "상태"), ("sid", "세션"),
+        ("ctx", "컨텍스트"), ("5h", "5시간"), ("wk", "주간"),
+        ("git", "git"), ("tool", "도구"), ("agent", "에이전트"), ("cost", "비용")
     ]
 
     private let monitorDir = URL(fileURLWithPath: NSHomeDirectory())
@@ -51,9 +59,9 @@ final class ClaudeCodeHUDConnector: ObservableObject {
     /// 우리 HUD 를 그려주는 node 렌더러 스크립트
     private let renderScriptPath = URL(fileURLWithPath: NSHomeDirectory())
         .appendingPathComponent(".claudemonitor/hud-render.mjs")
-    /// 렌더러가 읽는 스타일 선택 파일
-    private let hudStylePath = URL(fileURLWithPath: NSHomeDirectory())
-        .appendingPathComponent(".claudemonitor/hud-style")
+    /// 렌더러가 읽는 표시 옵션 파일(JSON)
+    private let hudOptsPath = URL(fileURLWithPath: NSHomeDirectory())
+        .appendingPathComponent(".claudemonitor/hud-opts.json")
     /// 우리가 statusLine 을 기록하는 파일 (등록처) — 실제로 동작하는 위치
     private let settingsPath = URL(fileURLWithPath: NSHomeDirectory())
         .appendingPathComponent(".claude/settings.json")
@@ -76,7 +84,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         guard isRegistered else { return }
         try? writeHUDScript()
         try? writeRenderScript()
-        try? writeStyleFile()
+        try? writeOptsFile()
     }
 
     // MARK: - Registration
@@ -85,7 +93,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         try FileManager.default.createDirectory(at: monitorDir, withIntermediateDirectories: true)
         try writeHUDScript()
         try writeRenderScript()
-        try? writeStyleFile()
+        try? writeOptsFile()
 
         let current = statusLineDict(in: settingsPath)
         let currentCmd = current?["command"] as? String
@@ -254,25 +262,17 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         try { d = JSON.parse(raw); } catch { process.exit(0); }
 
         const E = String.fromCharCode(27);
-        const C = {
-          r: E + '[0m', dim: E + '[2m', gray: E + '[90m',
-          red: E + '[31m', grn: E + '[32m', yel: E + '[33m',
-          blu: E + '[34m', mag: E + '[35m', cyn: E + '[36m', org: E + '[38;5;208m'
-        };
-        const lvl = (p) => (p >= 80 ? C.red : p >= 50 ? C.yel : C.grn);
+        const R = E + '[0m';
+        const NL = String.fromCharCode(10);
 
         const DIR = (process.env.HOME || '') + '/.claudemonitor';
-        let style = 'full';
-        try { style = (fs.readFileSync(DIR + '/hud-style', 'utf8').trim()) || 'full'; } catch { }
+        let opt = { emoji: true, filled: true, multiline: false, fields: null };
+        try { opt = Object.assign(opt, JSON.parse(fs.readFileSync(DIR + '/hud-opts.json', 'utf8'))); } catch { }
+        const emoji = !!opt.emoji, filled = !!opt.filled, multiline = !!opt.multiline;
+        const fields = Array.isArray(opt.fields) ? opt.fields : null;
 
-        // 명명된 세그먼트를 만들어 두고, 스타일이 그중 일부를 골라 출력한다.
-        const P = {};
-
-        const ver = d.version || '';
-        P.ver = C.cyn + '[CC#' + ver + ']' + C.r;
-
-        const model = (d.model && (d.model.display_name || d.model.id)) || '';
-        if (model) P.model = C.mag + '◆ ' + model + C.r;
+        // 사용률 레벨 → [채움 배경, 채움 전경, tint(밝은 전경)]
+        const lvl = (p) => (p >= 80 ? [52, 210, 203] : p >= 50 ? [58, 229, 178] : [22, 120, 35]);
 
         // transcript 꼬리에서 action / tool / agent 추출
         let action = '', tool = '', agent = '';
@@ -285,7 +285,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
             const buf = Buffer.alloc(len);
             fs.readSync(fd, buf, 0, len, st.size - len);
             fs.closeSync(fd);
-            const lines = buf.toString('utf8').split(String.fromCharCode(10)).filter(Boolean);
+            const lines = buf.toString('utf8').split(NL).filter(Boolean);
             for (let i = lines.length - 1; i >= 0; i--) {
               let ev; try { ev = JSON.parse(lines[i]); } catch { continue; }
               const role = ev.type || (ev.message && ev.message.role) || '';
@@ -307,15 +307,6 @@ final class ClaudeCodeHUDConnector: ObservableObject {
             }
           }
         } catch { }
-        if (action) P.action = C.gray + '▸ ' + action + C.r;
-
-        const sid = (d.session_id || '').slice(0, 6);
-        if (sid) P.sid = C.dim + '#' + sid + C.r;
-
-        const cw = d.context_window;
-        if (cw && typeof cw.used_percentage === 'number') {
-          P.ctx = C.gray + 'ctx ' + C.r + lvl(cw.used_percentage) + Math.round(cw.used_percentage) + '%' + C.r;
-        }
 
         const fmtReset = (ts) => {
           if (!ts) return '';
@@ -324,46 +315,86 @@ final class ClaudeCodeHUDConnector: ObservableObject {
           const m = Math.floor(ms / 60000);
           return m >= 60 ? (' ' + Math.floor(m / 60) + 'h') : (' ' + m + 'm');
         };
-        const rate = (label, o) => {
-          if (!o || typeof o.used_percentage !== 'number') return null;
-          return C.gray + label + ' ' + C.r + lvl(o.used_percentage) + Math.round(o.used_percentage) + '%' + C.dim + fmtReset(o.resets_at) + C.r;
+
+        // 각 세그먼트: { emoji, text, bg, fg, tint }
+        const parts = {};
+        const add = (key, emoji, text, bg, fg, tint) => { parts[key] = { emoji, text, bg, fg, tint }; };
+
+        add('ver', '🔹', 'CC ' + (d.version || ''), 24, 159, 39);
+        const model = (d.model && (d.model.display_name || d.model.id)) || '';
+        if (model) add('model', '🧠', model, 54, 225, 141);
+        if (action) add('action', '▶️', action, 240, 255, 245);
+        const sid = (d.session_id || '').slice(0, 6);
+        if (sid) add('sid', '🔖', '#' + sid, 236, 247, 244);
+        const cw = d.context_window;
+        if (cw && typeof cw.used_percentage === 'number') {
+          const L = lvl(cw.used_percentage);
+          add('ctx', '📊', 'ctx ' + Math.round(cw.used_percentage) + '%', L[0], L[1], L[2]);
+        }
+        const rate = (key, emoji, label, o) => {
+          if (!o || typeof o.used_percentage !== 'number') return;
+          const L = lvl(o.used_percentage);
+          add(key, emoji, label + ' ' + Math.round(o.used_percentage) + '%' + fmtReset(o.resets_at), L[0], L[1], L[2]);
         };
         const rl = d.rate_limits || {};
-        const r5 = rate('5h', rl.five_hour); if (r5) P['5h'] = r5;
-        const rw = rate('wk', rl.seven_day); if (rw) P.wk = rw;
-
+        rate('5h', '⏱️', '5h', rl.five_hour);
+        rate('wk', '📅', 'wk', rl.seven_day);
         let branch = '';
         try {
           const dir = (d.workspace && d.workspace.current_dir) || d.cwd || '.';
           branch = execSync('git -C "' + dir + '" rev-parse --abbrev-ref HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
         } catch { }
-        if (branch) P.git = C.cyn + 'git:' + branch + C.r;
+        if (branch) add('git', '🌿', 'git ' + branch, 23, 159, 43);
+        if (tool) add('tool', '🔧', 'tool ' + tool, 25, 159, 75);
+        if (agent) add('agent', '🤖', '@' + agent, 130, 230, 215);
+        if (d.cost && typeof d.cost.total_cost_usd === 'number') add('cost', '💰', '$' + d.cost.total_cost_usd.toFixed(2), 238, 191, 108);
 
-        if (tool) P.tool = C.blu + 'tool:' + tool + C.r;
-        if (agent) P.agent = C.org + '@' + agent + C.r;
+        const ALL = ['ver', 'model', 'action', 'sid', 'ctx', '5h', 'wk', 'git', 'tool', 'agent', 'cost'];
+        const selKeys = ALL.filter((k) => parts[k] && (!fields || fields.indexOf(k) >= 0));
 
-        if (d.cost && typeof d.cost.total_cost_usd === 'number') {
-          P.cost = C.dim + '$' + d.cost.total_cost_usd.toFixed(2) + C.r;
-        }
+        // 범주별 행 그룹 (행분리용): 세션 · 사용량 · 작업
+        const ROWS = [
+          ['ver', 'model', 'action', 'sid'],
+          ['ctx', '5h', 'wk'],
+          ['git', 'tool', 'agent', 'cost']
+        ];
+        const grouped = ROWS.map((r) => r.filter((k) => selKeys.indexOf(k) >= 0)).filter((r) => r.length);
 
-        const STYLES = {
-          full:    ['ver', 'model', 'action', 'sid', 'ctx', '5h', 'wk', 'git', 'tool', 'agent', 'cost'],
-          compact: ['model', 'ctx', '5h', 'wk', 'git'],
-          minimal: ['model', '5h', 'wk'],
-          dev:     ['model', 'ctx', 'git', 'tool', 'agent', 'cost'],
-          rate:    ['5h', 'wk']
+        const fgc = (c, t) => E + '[38;5;' + c + 'm' + t + R;
+        // 한 세그먼트: 이모지 on/off + 배경 채움 on/off 조합
+        const seg = (k) => {
+          const p = parts[k];
+          const label = (emoji && p.emoji ? p.emoji + ' ' : '') + p.text;
+          if (filled) return E + '[48;5;' + p.bg + 'm' + E + '[38;5;' + p.fg + 'm ' + label + ' ' + R;
+          return fgc(p.tint, label);
         };
-        const order = STYLES[style] || STYLES.full;
-        const seg = order.map((k) => P[k]).filter(Boolean);
-        process.stdout.write(seg.join(C.gray + ' │ ' + C.r));
+        const sep = filled ? '' : (E + '[90m' + '  ·  ' + R);
+
+        let out;
+        if (multiline) {
+          out = grouped.map((row) => row.map(seg).join(sep)).join(NL);
+        } else {
+          out = selKeys.map(seg).join(sep);
+        }
+        process.stdout.write(out);
         """
         try script.write(to: renderScriptPath, atomically: true, encoding: .utf8)
     }
 
-    /// 선택된 스타일을 ~/.claudemonitor/hud-style 에 기록한다. 렌더러가 매 렌더마다 읽는다.
-    private func writeStyleFile() throws {
+    /// 표시 옵션을 hud-opts.json 에 기록한다. 렌더러가 매 렌더마다 읽는다.
+    private func writeOptsFile() throws {
         try FileManager.default.createDirectory(at: monitorDir, withIntermediateDirectories: true)
-        try hudStyle.write(to: hudStylePath, atomically: true, encoding: .utf8)
+        // availableFields 순서를 보존해 직렬화
+        let orderedFields = ClaudeCodeHUDConnector.availableFields
+            .map { $0.id }.filter { hudFields.contains($0) }
+        let opts: [String: Any] = [
+            "emoji": hudEmoji,
+            "filled": hudFilled,
+            "multiline": hudMultiline,
+            "fields": orderedFields
+        ]
+        let data = try JSONSerialization.data(withJSONObject: opts, options: [.prettyPrinted, .sortedKeys])
+        try data.write(to: hudOptsPath, options: .atomic)
     }
 
     /// 주어진 설정 파일에 statusLine 을 병합 기록(nil 이면 키 제거). 다른 키는 보존.
