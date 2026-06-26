@@ -242,6 +242,9 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         const lvl = (p) => (p >= 80 ? C.red : p >= 50 ? C.yel : C.grn);
         const seg = [];
 
+        const ver = d.version || '';
+        seg.push(C.cyn + '[CC#' + ver + ']' + C.r);
+
         const model = (d.model && (d.model.display_name || d.model.id)) || '';
         if (model) seg.push(C.mag + '◆ ' + model + C.r);
 

@@ -47,19 +47,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pop.contentViewController = hc
         popover = pop
 
-        // Combine Claude + Codex signals → update status bar item
+        // Combine Claude + Codex signals (+ on/off 토글) → update status bar item
         cancellable = AnthropicUsageReader.shared.$usage
             .combineLatest(CodexSessionReader.shared.$primaryUsedPercent)
             .combineLatest(CodexSessionReader.shared.$sessions.map { !$0.isEmpty })
             .combineLatest(appState.$tokenRateLevel)
+            .combineLatest(UsageLimits.shared.$claudeEnabled)
+            .combineLatest(UsageLimits.shared.$codexEnabled)
             .receive(on: RunLoop.main)
-            .sink { [weak self] combined2, rateLevel in
+            .sink { [weak self] outer, codexEnabled in
                 guard let self else { return }
+                let (withRate, claudeEnabled) = outer
+                let (combined2, rateLevel) = withRate
                 let (combined1, codexConnected) = combined2
                 let (usage, codexUsedPct) = combined1
 
-                let claudeRemaining: Double? = usage?.fiveHourRemaining
-                let codexPct: Double? = codexConnected ? codexUsedPct : nil
+                // 토글이 꺼진 쪽은 아이콘에서도 숨긴다
+                let claudeRemaining: Double? = claudeEnabled ? usage?.fiveHourRemaining : nil
+                let codexPct: Double? = (codexEnabled && codexConnected) ? codexUsedPct : nil
 
                 guard let button = self.statusItem?.button else { return }
 

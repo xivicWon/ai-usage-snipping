@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"rtk read ~/Library/Logs/DiagnosticReports/ClaudeMonitor-2026-06-26-182219.ips 2>/dev/null | python3 -c \\\"\\nimport json, sys\\nd = json.load(sys.stdin)\\nprint('Exception:', d.get('exception'...",
-  "error": "Exit code 1",
-  "timestamp": "2026-06-26T09:23:57.715Z",
-  "retry_count": 1
-}
