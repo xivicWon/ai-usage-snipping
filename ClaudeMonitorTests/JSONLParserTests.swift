@@ -24,7 +24,7 @@ final class JSONLParserTests: XCTestCase {
 
     func test_parses_assistant_message_fields() throws {
         let file = tempDir.appendingPathComponent("t1.jsonl")
-        try sampleLine.write(to: file, atomically: true, encoding: .utf8)
+        try (sampleLine + "\n").write(to: file, atomically: true, encoding: .utf8)
 
         let records = try sut.parseNew(in: file)
 
@@ -42,7 +42,7 @@ final class JSONLParserTests: XCTestCase {
 
     func test_cost_is_calculated_from_pricing_table() throws {
         let file = tempDir.appendingPathComponent("t2.jsonl")
-        try sampleLine.write(to: file, atomically: true, encoding: .utf8)
+        try (sampleLine + "\n").write(to: file, atomically: true, encoding: .utf8)
 
         let records = try sut.parseNew(in: file)
         // sonnet: 1000*3/1M + 500*15/1M + 200*0.3/1M + 100*3.75/1M
@@ -65,7 +65,7 @@ final class JSONLParserTests: XCTestCase {
 
     func test_incremental_parse_returns_only_new_lines() throws {
         let file = tempDir.appendingPathComponent("t4.jsonl")
-        try sampleLine.write(to: file, atomically: true, encoding: .utf8)
+        try (sampleLine + "\n").write(to: file, atomically: true, encoding: .utf8)
 
         let first = try sut.parseNew(in: file)
         XCTAssertEqual(first.count, 1)

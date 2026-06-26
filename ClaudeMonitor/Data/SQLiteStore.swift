@@ -105,10 +105,10 @@ final class SQLiteStore {
                        SUM(outputTokens)  AS totalOutputTokens,
                        COUNT(*)           AS sessionCount
                 FROM sessionRecord
-                WHERE date >= date('now', 'localtime', '-\(days) days')
+                WHERE date >= date('now', 'localtime', ?)
                 GROUP BY date
                 ORDER BY date DESC
-                """)
+                """, arguments: ["-\(days) days"])
         }
     }
 }

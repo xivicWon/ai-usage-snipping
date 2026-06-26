@@ -25,11 +25,21 @@ final class JSONLParser {
         let data = try Data(contentsOf: fileURL)
         let path = fileURL.path
         let offset = offsets[path, default: 0]
-        offsets[path] = data.count
-
         guard offset < data.count else { return [] }
+
         let slice = data[offset...]
         guard let text = String(data: slice, encoding: .utf8) else { return [] }
+
+        // Advance only to the last newline boundary to avoid consuming partial lines.
+        // Bytes after the last newline stay in the "unread" buffer for the next call.
+        let lastNewlineOffset: Int
+        if let lastNL = slice.lastIndex(of: UInt8(ascii: "\n")) {
+            lastNewlineOffset = slice.distance(from: slice.startIndex, to: lastNL) + 1
+        } else {
+            // No newline yet — entire slice may be a partial line; don't advance
+            return []
+        }
+        offsets[path] = offset + lastNewlineOffset
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { dec in
