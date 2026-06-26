@@ -21,14 +21,21 @@ struct AnthropicUsage {
 
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "ko_KR")
-
         let cal = Calendar.current
-        if cal.isDateInToday(date) {
-            fmt.dateFormat = "a h:mm"   // 오후 7:09
+
+        // Relative part
+        let relative: String
+        if diff < 3600 {
+            relative = String(format: "%.0f분 후", diff / 60)
         } else {
-            fmt.dateFormat = "M/d a h:mm"  // 7/3 오전 1:59
+            relative = String(format: "%.0f시간 %.0f분 후", floor(diff / 3600), (diff.truncatingRemainder(dividingBy: 3600)) / 60)
         }
-        return fmt.string(from: date) + " 갱신"
+
+        // Absolute part
+        fmt.dateFormat = cal.isDateInToday(date) ? "a h:mm" : "M/d a h:mm"
+        let absolute = fmt.string(from: date)
+
+        return "\(relative) · \(absolute)"
     }
 }
 
