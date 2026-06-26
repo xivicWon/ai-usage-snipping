@@ -80,7 +80,7 @@ struct DashboardView: View {
 
     private var usageContent: some View {
         VStack(spacing: 0) {
-            // Usage summary cards
+            // Quota cards
             HStack(spacing: 28) {
                 summaryCard(title: "5시간 창",
                             pct: appState.windowPercentRemaining,
@@ -89,8 +89,39 @@ struct DashboardView: View {
                             pct: appState.weeklyPercentRemaining,
                             reset: usageReader.usage?.timeUntilReset(usageReader.usage?.weeklyResetsAt))
             }
-            .padding(16)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            Divider()
+
+            // Efficiency metrics
+            HStack(spacing: 0) {
+                efficiencyCard(
+                    title: "캐시 효율",
+                    value: String(format: "%.0f%%", appState.weeklyStats.cacheHitRate * 100),
+                    hint: appState.weeklyStats.cacheHitRate < 0.4 ? "CLAUDE.md 보완 필요" : "양호",
+                    color: appState.weeklyStats.cacheHitRate >= 0.6 ? .green
+                         : appState.weeklyStats.cacheHitRate >= 0.3 ? .orange : .red
+                )
+                Divider().frame(height: 44)
+                efficiencyCard(
+                    title: "Opus 비율",
+                    value: String(format: "%.0f%%", appState.weeklyStats.opusRatio * 100),
+                    hint: appState.weeklyStats.opusRatio > 0.5 ? "Sonnet 전환 검토" : "효율적",
+                    color: appState.weeklyStats.opusRatio <= 0.2 ? .green
+                         : appState.weeklyStats.opusRatio <= 0.5 ? .orange : .red
+                )
+                Divider().frame(height: 44)
+                efficiencyCard(
+                    title: "호출당 토큰",
+                    value: fmtTokens(appState.weeklyStats.avgTokensPerCall),
+                    hint: appState.weeklyStats.avgTokensPerCall > 50_000 ? "컨텍스트 비대" : "정상",
+                    color: appState.weeklyStats.avgTokensPerCall <= 30_000 ? .green
+                         : appState.weeklyStats.avgTokensPerCall <= 50_000 ? .orange : .red
+                )
+            }
+            .padding(.vertical, 10)
 
             Divider()
 
@@ -112,6 +143,22 @@ struct DashboardView: View {
                 }
             }
         }
+    }
+
+    private func efficiencyCard(title: String, value: String, hint: String, color: Color) -> some View {
+        VStack(spacing: 3) {
+            Text(title)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.tertiary)
+                .textCase(.uppercase)
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundStyle(color)
+            Text(hint)
+                .font(.system(size: 9))
+                .foregroundStyle(color.opacity(0.8))
+        }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Project chart

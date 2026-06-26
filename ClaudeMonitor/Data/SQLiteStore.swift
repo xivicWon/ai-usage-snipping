@@ -6,15 +6,22 @@ struct ProjectSummary: FetchableRecord, Identifiable {
     var id: String { projectPath }
     var projectPath: String
     var totalTokens: Int
+    var recordCount: Int
 
-    var projectName: String {
-        URL(fileURLWithPath: projectPath).lastPathComponent
-    }
+    var projectName: String { URL(fileURLWithPath: projectPath).lastPathComponent }
+    var avgTokensPerCall: Int { recordCount > 0 ? totalTokens / recordCount : 0 }
 
     init(row: Row) {
-        projectPath = row["projectPath"]
-        totalTokens = row["totalTokens"]
+        projectPath   = row["projectPath"]
+        totalTokens   = row["totalTokens"]
+        recordCount   = row["recordCount"]
     }
+}
+
+struct WeeklyStats {
+    var cacheHitRate: Double    // 0–1: cacheRead / (input + cacheRead)
+    var opusRatio: Double       // 0–1: opus calls / total calls
+    var avgTokensPerCall: Int   // (input+output) per API call
 }
 
 struct DailySummary: FetchableRecord, Identifiable {
@@ -135,7 +142,8 @@ final class SQLiteStore {
         try dbQueue.read { db in
             try ProjectSummary.fetchAll(db, sql: """
                 SELECT projectPath,
-                       SUM(inputTokens + outputTokens) AS totalTokens
+                       SUM(inputTokens + outputTokens) AS totalTokens,
+                       COUNT(*)                         AS recordCount
                 FROM sessionRecord
                 WHERE date >= date('now', 'localtime', 'weekday 0', '-6 days')
                   AND date <= date('now', 'localtime')
@@ -143,6 +151,32 @@ final class SQLiteStore {
                 ORDER BY totalTokens DESC
                 LIMIT 20
                 """)
+        }
+    }
+
+    /// Efficiency metrics for the current Mon–Sun week.
+    func weeklyStats() throws -> WeeklyStats {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT
+                  CAST(SUM(cacheReadTokens) AS REAL)
+                    / MAX(SUM(inputTokens + cacheReadTokens), 1)  AS cacheHitRate,
+                  CAST(SUM(CASE WHEN model LIKE '%opus%' THEN 1 ELSE 0 END) AS REAL)
+                    / MAX(COUNT(*), 1)                            AS opusRatio,
+                  SUM(inputTokens + outputTokens)
+                    / MAX(COUNT(*), 1)                            AS avgTokensPerCall
+                FROM sessionRecord
+                WHERE date >= date('now', 'localtime', 'weekday 0', '-6 days')
+                  AND date <= date('now', 'localtime')
+                """)
+            guard let row = rows.first else {
+                return WeeklyStats(cacheHitRate: 0, opusRatio: 0, avgTokensPerCall: 0)
+            }
+            return WeeklyStats(
+                cacheHitRate:      row["cacheHitRate"]      as? Double ?? 0,
+                opusRatio:         row["opusRatio"]         as? Double ?? 0,
+                avgTokensPerCall:  Int(row["avgTokensPerCall"] as? Int64 ?? 0)
+            )
         }
     }
 
