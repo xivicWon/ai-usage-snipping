@@ -14,6 +14,26 @@ struct AnthropicUsage {
     var fiveHourRemaining: Double { max(0, Double(100 - fiveHourPercentUsed)) / 100 }
     var weeklyRemaining: Double   { max(0, Double(100 - weeklyPercentUsed)) / 100 }
 
+    /// Minutes remaining until reset (negative if past).
+    func minutesUntilReset(_ date: Date?) -> Double? {
+        guard let date else { return nil }
+        return date.timeIntervalSinceNow / 60
+    }
+
+    /// Short "X분 남음" label for 5-hour window.
+    func shortTimeUntilReset(_ date: Date?) -> String? {
+        guard let date else { return nil }
+        let diff = date.timeIntervalSinceNow
+        guard diff > 0 else { return "곧 갱신" }
+        if diff < 3600 {
+            return String(format: "%.0f분 남음", diff / 60)
+        }
+        return String(format: "%.0f시간 %.0f분 남음",
+                      floor(diff / 3600),
+                      (diff.truncatingRemainder(dividingBy: 3600)) / 60)
+    }
+
+    /// "X분 후 · 오후 7:10" label for weekly window.
     func timeUntilReset(_ date: Date?) -> String? {
         guard let date else { return nil }
         let diff = date.timeIntervalSinceNow
@@ -22,20 +42,14 @@ struct AnthropicUsage {
         let fmt = DateFormatter()
         fmt.locale = Locale(identifier: "ko_KR")
         let cal = Calendar.current
-
-        // Relative part
         let relative: String
         if diff < 3600 {
             relative = String(format: "%.0f분 후", diff / 60)
         } else {
-            relative = String(format: "%.0f시간 %.0f분 후", floor(diff / 3600), (diff.truncatingRemainder(dividingBy: 3600)) / 60)
+            relative = String(format: "%.0f시간 후", diff / 3600)
         }
-
-        // Absolute part
-        fmt.dateFormat = cal.isDateInToday(date) ? "a h:mm" : "M/d a h:mm"
-        let absolute = fmt.string(from: date)
-
-        return "\(relative) · \(absolute)"
+        fmt.dateFormat = cal.isDateInToday(date) ? "a h:mm" : "M/d"
+        return "\(relative) · \(fmt.string(from: date))"
     }
 }
 

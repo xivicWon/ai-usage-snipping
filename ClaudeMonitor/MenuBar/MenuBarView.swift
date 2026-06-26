@@ -71,23 +71,28 @@ struct MenuBarView: View {
     // MARK: - Usage row (two tanks side by side)
 
     private var usageRow: some View {
-        HStack(spacing: 0) {
+        let fiveResetDate  = usageReader.usage?.fiveHourResetsAt
+        let weekResetDate  = usageReader.usage?.weeklyResetsAt
+        let u = usageReader.usage
+        return HStack(spacing: 0) {
             tankBlock(
                 label: "5시간 창",
                 pct: appState.windowPercentRemaining,
-                reset: usageReader.usage?.timeUntilReset(usageReader.usage?.fiveHourResetsAt)
+                reset: u?.shortTimeUntilReset(fiveResetDate),
+                resetMinutes: u?.minutesUntilReset(fiveResetDate)
             )
             Divider()
             tankBlock(
                 label: "이번 주",
                 pct: appState.weeklyPercentRemaining,
-                reset: usageReader.usage?.timeUntilReset(usageReader.usage?.weeklyResetsAt)
+                reset: u?.timeUntilReset(weekResetDate),
+                resetMinutes: u?.minutesUntilReset(weekResetDate)
             )
         }
         .padding(.vertical, 10)
     }
 
-    private func tankBlock(label: String, pct: Double?, reset: String?) -> some View {
+    private func tankBlock(label: String, pct: Double?, reset: String?, resetMinutes: Double?) -> some View {
         VStack(spacing: 4) {
             Text(label)
                 .font(.system(size: 9, weight: .medium))
@@ -97,7 +102,6 @@ struct MenuBarView: View {
             if let pct {
                 WaterTankView(pct: pct, color: pctColor(pct))
                     .frame(width: 32, height: 52)
-
                 Text(String(format: "%.0f%%", pct * 100))
                     .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .foregroundStyle(pctColor(pct))
@@ -110,16 +114,21 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
             }
 
-            // Reset countdown — always show slot so layout is stable
             HStack(spacing: 3) {
-                Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 8))
-                Text(reset ?? "--")
-                    .font(.system(size: 9))
+                Image(systemName: "arrow.clockwise").font(.system(size: 8))
+                Text(reset ?? "--").font(.system(size: 9))
             }
-            .foregroundStyle(reset != nil ? Color.secondary : Color.secondary.opacity(0.3))
+            .foregroundStyle(resetColor(resetMinutes))
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func resetColor(_ minutes: Double?) -> Color {
+        guard let m = minutes else { return Color.secondary.opacity(0.3) }
+        guard m > 0 else { return .red }
+        if m > 60 { return .green }
+        if m > 20 { return .orange }
+        return .red
     }
 
     private func pctColor(_ pct: Double) -> Color {
