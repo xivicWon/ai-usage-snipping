@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		33CCA2E30A0D83ABA8471E95 /* FSEventWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 064D459D72D381E7B595EB7F /* FSEventWatcher.swift */; };
 		35C2C2C2C97F97332DC9911E /* UsageLimits.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCFFE24F64246E1FC672EBD3 /* UsageLimits.swift */; };
+		3F85887EF6A1ADC61E36A892 /* SessionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586053C67C6E14B7D97EF938 /* SessionReader.swift */; };
 		42D740C0B371BBBEBB9DC0D2 /* AnthropicUsageReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87CD60EF87CF0D1AAD95CCF6 /* AnthropicUsageReader.swift */; };
 		471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */; };
 		4B5B9002E14D19F2EA776645 /* ClaudeMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */; };
@@ -44,6 +45,7 @@
 		20AD9838A3FA57813FE57DE7 /* ClaudeMonitorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeMonitorApp.swift; sourceTree = "<group>"; };
 		31C17EE3254080CBA8B0DD22 /* JSONLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLParserTests.swift; sourceTree = "<group>"; };
 		4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingTableTests.swift; sourceTree = "<group>"; };
+		586053C67C6E14B7D97EF938 /* SessionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionReader.swift; sourceTree = "<group>"; };
 		87CD60EF87CF0D1AAD95CCF6 /* AnthropicUsageReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicUsageReader.swift; sourceTree = "<group>"; };
 		89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStore.swift; sourceTree = "<group>"; };
 		93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStoreTests.swift; sourceTree = "<group>"; };
@@ -145,6 +147,7 @@
 				13DDDF5B01814C7620139479 /* JSONLParser.swift */,
 				F4F0139049AB7029E72F1BEB /* PricingTable.swift */,
 				89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */,
+				586053C67C6E14B7D97EF938 /* SessionReader.swift */,
 				C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */,
 				FCFFE24F64246E1FC672EBD3 /* UsageLimits.swift */,
 			);
@@ -253,6 +256,7 @@
 				D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */,
 				C0B70CF38A6A0AA853808F58 /* ProfileStore.swift in Sources */,
 				471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */,
+				3F85887EF6A1ADC61E36A892 /* SessionReader.swift in Sources */,
 				35C2C2C2C97F97332DC9911E /* UsageLimits.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

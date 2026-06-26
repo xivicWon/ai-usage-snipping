@@ -3,216 +3,174 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var appState: AppState
-    @ObservedObject private var profiles = ProfileStore.shared
-    @State private var showAddProfile = false
-    @State private var newProfileName = ""
-    @State private var newProfilePath = ""
+    @ObservedObject private var sessions = SessionReader.shared
+    @ObservedObject private var usageReader = AnthropicUsageReader.shared
 
     var body: some View {
         HSplitView {
-            // Left: profile list
-            profileSidebar
-                .frame(minWidth: 160, maxWidth: 200)
-
-            // Right: usage data
+            sessionSidebar
+                .frame(minWidth: 180, maxWidth: 220)
             usageContent
         }
-        .frame(width: 720, height: 520)
+        .frame(width: 740, height: 520)
     }
 
-    // MARK: - Profile sidebar
+    // MARK: - Session sidebar
 
-    private var profileSidebar: some View {
+    private var sessionSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("계정")
-                .font(.headline)
-                .padding(.horizontal, 14)
-                .padding(.top, 16)
-                .padding(.bottom, 8)
-
-            Divider()
-
-            List(profiles.profiles, selection: .constant(profiles.activeProfileId)) { p in
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(p.name)
-                            .font(.callout)
-                        Text(p.claudeHomePath)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    Spacer()
-                    if p.id == profiles.activeProfileId {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                            .font(.caption)
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture { profiles.activate(p.id) }
-                .contextMenu {
-                    if profiles.profiles.count > 1 {
-                        Button("삭제", role: .destructive) {
-                            profiles.remove(id: p.id)
+            // Account header
+            if let acct = sessions.accountInfo {
+                HStack(spacing: 6) {
+                    Image(systemName: "person.circle.fill")
+                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(acct.username)
+                            .font(.headline)
+                        if !acct.subscriptionType.isEmpty {
+                            Text(acct.displayPlan + " 플랜")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
+                .padding(.horizontal, 14)
+                .padding(.top, 14)
+                .padding(.bottom, 8)
+            }
+
+            Divider()
+
+            // Session stats
+            HStack(spacing: 0) {
+                statChip(value: "\(sessions.activeCount)", label: "활성", color: .green)
+                statChip(value: "\(sessions.idleSessions.count)", label: "대기", color: .secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+
+            Divider()
+
+            Text("세션")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .textCase(.uppercase)
+                .padding(.horizontal, 14)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
+
+            List(sessions.sessions) { session in
+                sessionRow(session)
+                    .listRowInsets(EdgeInsets(top: 2, leading: 10, bottom: 2, trailing: 10))
             }
             .listStyle(.sidebar)
 
             Divider()
 
             Button {
-                newProfileName = ""
-                newProfilePath = URL(fileURLWithPath: NSHomeDirectory())
-                    .appendingPathComponent(".claude").path
-                showAddProfile = true
+                sessions.reload()
             } label: {
-                Label("계정 추가", systemImage: "plus")
-                    .font(.callout)
+                Label("새로고침", systemImage: "arrow.clockwise")
+                    .font(.caption)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-        }
-        .sheet(isPresented: $showAddProfile) {
-            addProfileSheet
+            .padding(.vertical, 8)
         }
     }
 
-    private var addProfileSheet: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("계정 추가")
-                .font(.headline)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("이름")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                TextField("예: 개인, 회사", text: $newProfileName)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Claude 홈 디렉토리")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack {
-                    TextField("~/.claude", text: $newProfilePath)
-                        .textFieldStyle(.roundedBorder)
-                    Button("찾기") {
-                        let panel = NSOpenPanel()
-                        panel.canChooseDirectories = true
-                        panel.canChooseFiles = false
-                        panel.begin { response in
-                            if response == .OK, let url = panel.url {
-                                newProfilePath = url.path
-                            }
-                        }
-                    }
-                }
-                Text("Claude Code가 사용하는 설정 폴더 (보통 ~/.claude)")
-                    .font(.caption2)
+    private func sessionRow(_ s: ClaudeSession) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(s.isActive ? Color.green : Color.secondary.opacity(0.3))
+                .frame(width: 7, height: 7)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(s.projectName)
+                    .font(.caption.weight(s.isActive ? .semibold : .regular))
+                    .lineLimit(1)
+                Text(s.duration)
+                    .font(.system(size: 9))
                     .foregroundStyle(.tertiary)
             }
-
-            HStack {
-                Spacer()
-                Button("취소") { showAddProfile = false }
-                    .keyboardShortcut(.cancelAction)
-                Button("추가") {
-                    let path = newProfilePath.isEmpty
-                        ? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".claude").path
-                        : newProfilePath
-                    profiles.add(name: newProfileName.isEmpty ? "새 계정" : newProfileName,
-                                 claudeHomePath: path)
-                    showAddProfile = false
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(newProfileName.isEmpty)
-            }
         }
-        .padding(24)
-        .frame(width: 420)
+    }
+
+    private func statChip(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 1) {
+            Text(value)
+                .font(.title3.bold())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 6)
+        .background(color.opacity(0.07))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(.horizontal, 3)
     }
 
     // MARK: - Usage content
 
     private var usageContent: some View {
         VStack(spacing: 0) {
-            // Summary header
-            HStack(spacing: 32) {
-                summaryCard(title: "5시간 창", tokens: appState.windowTokens,
-                            pct: appState.windowPercentRemaining)
-                summaryCard(title: "이번 주", tokens: appState.weekTokens,
-                            pct: appState.weeklyPercentRemaining)
-                summaryCard(title: "오늘 비용", tokens: nil,
-                            cost: appState.todayCostUSD, pct: nil)
+            HStack(spacing: 28) {
+                summaryCard(title: "5시간 창", pct: appState.windowPercentRemaining,
+                            reset: usageReader.usage?.timeUntilReset(usageReader.usage?.fiveHourResetsAt))
+                summaryCard(title: "이번 주", pct: appState.weeklyPercentRemaining,
+                            reset: usageReader.usage?.timeUntilReset(usageReader.usage?.weeklyResetsAt))
+                summaryCard(title: "오늘 비용", pct: nil, cost: appState.todayCostUSD, reset: nil)
             }
-            .padding(20)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Divider()
 
-            // Daily table
             if appState.dailySummaries.isEmpty {
                 Spacer()
-                Text("데이터 없음 — Claude Code 사용 후 자동으로 채워집니다")
-                    .foregroundStyle(.secondary)
+                Text("데이터 없음").foregroundStyle(.secondary)
                 Spacer()
             } else {
                 Table(appState.dailySummaries) {
                     TableColumn("날짜", value: \.date)
                     TableColumn("입력") { row in
-                        Text(formatTokens(row.totalInputTokens)).monospacedDigit()
-                    }
-                    .width(80)
+                        Text(fmt(row.totalInputTokens)).monospacedDigit()
+                    }.width(75)
                     TableColumn("출력") { row in
-                        Text(formatTokens(row.totalOutputTokens)).monospacedDigit()
-                    }
-                    .width(80)
+                        Text(fmt(row.totalOutputTokens)).monospacedDigit()
+                    }.width(75)
                     TableColumn("합계") { row in
-                        Text(formatTokens(row.totalInputTokens + row.totalOutputTokens))
-                            .monospacedDigit().bold()
-                    }
-                    .width(90)
+                        Text(fmt(row.totalInputTokens + row.totalOutputTokens)).monospacedDigit().bold()
+                    }.width(80)
                     TableColumn("비용") { row in
                         Text(row.totalCostUSD.formatted(.currency(code: "USD"))).monospacedDigit()
-                    }
-                    .width(80)
+                    }.width(80)
                     TableColumn("세션") { row in
                         Text("\(row.sessionCount)").monospacedDigit()
-                    }
-                    .width(50)
+                    }.width(45)
                 }
             }
         }
     }
 
-    private func summaryCard(title: String, tokens: Int?, cost: Double? = nil, pct: Double?) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+    private func summaryCard(title: String, pct: Double?, cost: Double? = nil, reset: String?) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
             Text(title)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
                 .textCase(.uppercase)
             if let pct {
                 Text(String(format: "%.0f%%", pct * 100))
-                    .font(.largeTitle.monospacedDigit().bold())
+                    .font(.system(size: 28, weight: .bold, design: .monospaced))
                     .foregroundStyle(pctColor(pct))
-                if let t = tokens {
-                    Text("사용: \(formatTokens(t))")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            } else if let t = tokens {
-                Text(formatTokens(t))
-                    .font(.largeTitle.monospacedDigit().bold())
-            } else if let c = cost {
-                Text(c.formatted(.currency(code: "USD")))
-                    .font(.largeTitle.monospacedDigit().bold())
+                Text("남음")
+                    .font(.caption2).foregroundStyle(.secondary)
+                if let r = reset { Text(r).font(.system(size: 9)).foregroundStyle(.tertiary) }
+            } else if let cost {
+                Text(cost.formatted(.currency(code: "USD")))
+                    .font(.system(size: 22, weight: .bold, design: .monospaced))
             }
         }
     }
@@ -225,11 +183,11 @@ struct DashboardView: View {
         }
     }
 
-    private func formatTokens(_ n: Int) -> String {
+    private func fmt(_ n: Int) -> String {
         switch n {
         case 0..<1_000: return "\(n)"
-        case 1_000..<1_000_000: return String(format: "%.1fK", Double(n) / 1_000)
-        default: return String(format: "%.1fM", Double(n) / 1_000_000)
+        case 1_000..<1_000_000: return String(format: "%.1fK", Double(n)/1_000)
+        default: return String(format: "%.1fM", Double(n)/1_000_000)
         }
     }
 }

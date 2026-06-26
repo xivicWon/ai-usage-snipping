@@ -4,53 +4,43 @@ import SwiftUI
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var usageReader = AnthropicUsageReader.shared
-    @ObservedObject private var profiles = ProfileStore.shared
+    @ObservedObject private var sessions = SessionReader.shared
     let openDashboard: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Compact top row: account chip + source label
-            HStack(spacing: 6) {
-                Menu {
-                    ForEach(profiles.profiles) { p in
-                        Button {
-                            profiles.activate(p.id)
-                        } label: {
-                            HStack {
-                                Text(p.name)
-                                if p.id == profiles.activeProfileId {
-                                    Image(systemName: "checkmark")
-                                }
-                            }
+            // Account + session count row
+            HStack(spacing: 8) {
+                // Account chip
+                HStack(spacing: 4) {
+                    Image(systemName: "person.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                    if let acct = sessions.accountInfo {
+                        Text(acct.username)
+                            .font(.system(size: 10, weight: .semibold))
+                        if !acct.subscriptionType.isEmpty {
+                            Text(acct.displayPlan)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Color.purple.opacity(0.8))
+                                .clipShape(Capsule())
                         }
                     }
-                } label: {
-                    HStack(spacing: 3) {
-                        Image(systemName: "person.circle.fill")
-                            .font(.system(size: 10))
-                        Text(profiles.activeProfile?.name ?? "기본")
-                            .font(.system(size: 10, weight: .medium))
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 7))
-                    }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    .background(Color.primary.opacity(0.07))
-                    .clipShape(Capsule())
                 }
-                .menuStyle(.borderlessButton)
-                .fixedSize()
 
                 Spacer()
 
-                if usageReader.usage != nil {
-                    Text("Anthropic · \(usageReader.cacheAge)")
+                // Active session badge
+                HStack(spacing: 3) {
+                    Circle()
+                        .fill(sessions.activeCount > 0 ? Color.green : Color.secondary.opacity(0.4))
+                        .frame(width: 6, height: 6)
+                    Text("\(sessions.activeCount) 세션")
                         .font(.system(size: 9))
-                        .foregroundStyle(.tertiary)
-                } else {
-                    Text("데이터 없음")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.horizontal, 12)
