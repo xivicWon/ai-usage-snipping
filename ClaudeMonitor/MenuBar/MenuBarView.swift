@@ -38,13 +38,49 @@ struct MenuBarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            accountRow
+            planRow
             Divider()
             usageRow
             Divider()
             menuButtons
         }
         .frame(width: 240)
+    }
+
+    // MARK: - Plan row
+
+    private var planRow: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkle")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+            if let plan = sessions.accountInfo?.displayPlan, !plan.isEmpty {
+                Text("Claude")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.primary)
+                Text(plan)
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Color.purple.opacity(0.75))
+                    .clipShape(Capsule())
+            } else {
+                Text("Claude")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.primary)
+            }
+            Spacer()
+            HStack(spacing: 3) {
+                Circle()
+                    .fill(sessions.activeCount > 0 ? Color.green : Color.secondary.opacity(0.35))
+                    .frame(width: 6, height: 6)
+                Text("\(sessions.activeCount)")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
     }
 
     // MARK: - Account row

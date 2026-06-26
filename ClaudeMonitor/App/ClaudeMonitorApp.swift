@@ -25,7 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "cpu", accessibilityDescription: "Claude Monitor")
+            button.image = Self.makeClaudeIcon()
             button.title = " --"
             button.action = #selector(togglePopover)
             button.target = self
@@ -87,6 +87,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         dashboardWindow = w
+    }
+
+    /// Claude-inspired menu bar icon: C-arc + small sparkle dot.
+    static func makeClaudeIcon() -> NSImage {
+        let sz: CGFloat = 18
+        let img = NSImage(size: NSSize(width: sz, height: sz), flipped: false) { bounds in
+            let cx = bounds.midX, cy = bounds.midY
+            let r: CGFloat = 7.2
+
+            // Outer C-arc (open right, ~270°)
+            let arc = NSBezierPath()
+            arc.appendArc(withCenter: NSPoint(x: cx, y: cy),
+                          radius: r, startAngle: 45, endAngle: 315, clockwise: false)
+            arc.lineWidth = 2
+            arc.lineCapStyle = .round
+            NSColor.labelColor.setStroke()
+            arc.stroke()
+
+            // Three small dots arranged vertically on the open side (right edge) — Claude's "signal bars"
+            let dotR: CGFloat = 1.2
+            let dotX = cx + r * cos(0 * .pi / 180)
+            for (i, dy) in [CGFloat(3), CGFloat(0), CGFloat(-3)].enumerated() {
+                let alpha: CGFloat = i == 1 ? 1.0 : 0.45
+                NSColor.labelColor.withAlphaComponent(alpha).setFill()
+                NSBezierPath(ovalIn: NSRect(x: dotX - dotR, y: cy + dy - dotR,
+                                            width: dotR * 2, height: dotR * 2)).fill()
+            }
+            return true
+        }
+        img.isTemplate = true
+        return img
     }
 
     static func formatTokens(_ n: Int) -> String {
