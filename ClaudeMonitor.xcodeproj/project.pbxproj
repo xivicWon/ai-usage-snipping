@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		4B5B9002E14D19F2EA776645 /* ClaudeMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */; };
 		A4279A2AEA51CB504671DF7F /* ClaudeMonitorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20AD9838A3FA57813FE57DE7 /* ClaudeMonitorApp.swift */; };
+		B032D0CE35CD41E134501DB1 /* PricingTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */; };
+		D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4F0139049AB7029E72F1BEB /* PricingTable.swift */; };
 		D7FCD950BF90744E8DF2CB3E /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 4FCF28A9277A18AC8034DE93 /* GRDB */; };
 		FA9CA14A57DDF17457003D17 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 7A47BBCBBEE31491AB524BAC /* GRDB */; };
 /* End PBXBuildFile section */
@@ -27,8 +29,10 @@
 		01E69CD8161F734BE0624EC4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeMonitorTests.swift; sourceTree = "<group>"; };
 		20AD9838A3FA57813FE57DE7 /* ClaudeMonitorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeMonitorApp.swift; sourceTree = "<group>"; };
+		4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingTableTests.swift; sourceTree = "<group>"; };
 		9924D1F6FBFD4F220629C2E2 /* ClaudeMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClaudeMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A694C018F13572E6F47C48F2 /* ClaudeMonitorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeMonitorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		F4F0139049AB7029E72F1BEB /* PricingTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingTable.swift; sourceTree = "<group>"; };
 		F9FAF0667A4500690AC14250 /* ClaudeMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClaudeMonitor.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -67,6 +71,7 @@
 				F9FAF0667A4500690AC14250 /* ClaudeMonitor.entitlements */,
 				01E69CD8161F734BE0624EC4 /* Info.plist */,
 				3228BA8B8EB13F4396A80FD3 /* App */,
+				BB30C17D71D441BDD9E19CA8 /* Data */,
 			);
 			path = ClaudeMonitor;
 			sourceTree = "<group>";
@@ -75,6 +80,7 @@
 			isa = PBXGroup;
 			children = (
 				09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */,
+				4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */,
 			);
 			path = ClaudeMonitorTests;
 			sourceTree = "<group>";
@@ -94,6 +100,14 @@
 				A694C018F13572E6F47C48F2 /* ClaudeMonitorTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		BB30C17D71D441BDD9E19CA8 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				F4F0139049AB7029E72F1BEB /* PricingTable.swift */,
+			);
+			path = Data;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -178,6 +192,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B5B9002E14D19F2EA776645 /* ClaudeMonitorTests.swift in Sources */,
+				B032D0CE35CD41E134501DB1 /* PricingTableTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -186,6 +201,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A4279A2AEA51CB504671DF7F /* ClaudeMonitorApp.swift in Sources */,
+				D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -205,6 +221,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -279,6 +296,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
