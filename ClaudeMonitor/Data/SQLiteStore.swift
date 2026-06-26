@@ -161,7 +161,7 @@ final class SQLiteStore {
                        CAST(SUM(cacheReadTokens) AS REAL)
                          / MAX(SUM(inputTokens + cacheReadTokens), 1) AS cacheHitRate
                 FROM sessionRecord
-                WHERE date >= date('now', 'localtime', 'weekday 0', '-6 days')
+                WHERE date >= date('now', 'localtime', '-6 days')
                   AND date <= date('now', 'localtime')
                 GROUP BY projectPath
                 ORDER BY totalTokens DESC
@@ -179,7 +179,7 @@ final class SQLiteStore {
                   CAST(strftime('%H', timestamp, 'localtime') AS INTEGER) AS hour,
                   SUM(inputTokens + outputTokens) AS tokens
                 FROM sessionRecord
-                WHERE date >= date('now', 'localtime', 'weekday 0', '-6 days')
+                WHERE date >= date('now', 'localtime', '-6 days')
                   AND date <= date('now', 'localtime')
                 GROUP BY dayOfWeek, hour
                 """)
@@ -197,7 +197,7 @@ final class SQLiteStore {
                   SUM(inputTokens + outputTokens)
                     / MAX(COUNT(*), 1)                            AS avgTokensPerCall
                 FROM sessionRecord
-                WHERE date >= date('now', 'localtime', 'weekday 0', '-6 days')
+                WHERE date >= date('now', 'localtime', '-6 days')
                   AND date <= date('now', 'localtime')
                 """)
             guard let row = rows.first else {

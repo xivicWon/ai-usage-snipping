@@ -88,7 +88,7 @@ struct MenuBarView: View {
     }
 
     private func tankBlock(label: String, pct: Double?, reset: String?) -> some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 4) {
             Text(label)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(.tertiary)
@@ -101,13 +101,6 @@ struct MenuBarView: View {
                 Text(String(format: "%.0f%%", pct * 100))
                     .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .foregroundStyle(pctColor(pct))
-
-                if let reset {
-                    Text(reset)
-                        .font(.system(size: 8))
-                        .foregroundStyle(.tertiary)
-                        .multilineTextAlignment(.center)
-                }
             } else {
                 RoundedRectangle(cornerRadius: 5)
                     .fill(Color.secondary.opacity(0.1))
@@ -116,6 +109,15 @@ struct MenuBarView: View {
                     .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
+
+            // Reset countdown — always show slot so layout is stable
+            HStack(spacing: 3) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 8))
+                Text(reset ?? "--")
+                    .font(.system(size: 9))
+            }
+            .foregroundStyle(reset != nil ? Color.secondary : Color.secondary.opacity(0.3))
         }
         .frame(maxWidth: .infinity)
     }

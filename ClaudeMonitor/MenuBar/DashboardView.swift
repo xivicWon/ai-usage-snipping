@@ -251,7 +251,7 @@ struct DashboardView: View {
     private var weeklyProjectChart: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
-                Text("이번 주 프로젝트별 사용량")
+                Text("최근 7일 프로젝트별 사용량")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -322,16 +322,10 @@ struct DashboardView: View {
     private func weekRangeLabel() -> String {
         let cal = Calendar.current
         let now = Date()
-        let weekday = cal.component(.weekday, from: now)
-        // Monday = 2 in Calendar (Sun=1), offset to get Mon
-        let daysFromMon = (weekday + 5) % 7
-        guard let mon = cal.date(byAdding: .day, value: -daysFromMon, to: now),
-              let sun = cal.date(byAdding: .day, value: 6 - daysFromMon, to: now) else {
-            return ""
-        }
+        guard let start = cal.date(byAdding: .day, value: -6, to: now) else { return "" }
         let fmt = DateFormatter()
         fmt.dateFormat = "M/d"
-        return "\(fmt.string(from: mon)) – \(fmt.string(from: sun))"
+        return "\(fmt.string(from: start)) – \(fmt.string(from: now))"
     }
 
     private func pctColor(_ pct: Double) -> Color {
