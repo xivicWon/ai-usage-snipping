@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		33CCA2E30A0D83ABA8471E95 /* FSEventWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 064D459D72D381E7B595EB7F /* FSEventWatcher.swift */; };
 		471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */; };
 		4B5B9002E14D19F2EA776645 /* ClaudeMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */; };
 		99A742107EC9BCFEE6DE3938 /* JSONLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DDDF5B01814C7620139479 /* JSONLParser.swift */; };
@@ -31,6 +32,7 @@
 
 /* Begin PBXFileReference section */
 		01E69CD8161F734BE0624EC4 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		064D459D72D381E7B595EB7F /* FSEventWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FSEventWatcher.swift; sourceTree = "<group>"; };
 		09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeMonitorTests.swift; sourceTree = "<group>"; };
 		13DDDF5B01814C7620139479 /* JSONLParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLParser.swift; sourceTree = "<group>"; };
 		20AD9838A3FA57813FE57DE7 /* ClaudeMonitorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeMonitorApp.swift; sourceTree = "<group>"; };
@@ -115,6 +117,7 @@
 		BB30C17D71D441BDD9E19CA8 /* Data */ = {
 			isa = PBXGroup;
 			children = (
+				064D459D72D381E7B595EB7F /* FSEventWatcher.swift */,
 				13DDDF5B01814C7620139479 /* JSONLParser.swift */,
 				F4F0139049AB7029E72F1BEB /* PricingTable.swift */,
 				C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */,
@@ -215,6 +218,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A4279A2AEA51CB504671DF7F /* ClaudeMonitorApp.swift in Sources */,
+				33CCA2E30A0D83ABA8471E95 /* FSEventWatcher.swift in Sources */,
 				99A742107EC9BCFEE6DE3938 /* JSONLParser.swift in Sources */,
 				D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */,
 				471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */,
