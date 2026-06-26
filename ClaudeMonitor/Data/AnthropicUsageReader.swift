@@ -43,7 +43,11 @@ final class AnthropicUsageReader: ObservableObject {
         .appendingPathComponent(".claude/plugins/oh-my-claudecode/.usage-cache-anthropic.json")
 
     private var watcher: DispatchSourceFileSystemObject?
-    private let iso = ISO8601DateFormatter()
+    private let iso: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
 
     private init() {
         reload()
