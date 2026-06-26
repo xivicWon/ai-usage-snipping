@@ -188,11 +188,16 @@ private struct HUDConnectionSections: View {
                         .foregroundStyle(tierColor)
                 }
 
-                connectCards
+                connectActions
 
                 if connector.isRegistered {
+                    Picker("HUD 스타일", selection: $connector.hudStyle) {
+                        ForEach(ClaudeCodeHUDConnector.availableStyles, id: \.id) { s in
+                            Text(s.label).tag(s.id)
+                        }
+                    }
                     Button(role: .destructive) {
-                        do { try connector.unregister(); errorMessage = nil; statusMessage = nil }
+                        do { try connector.unregister(); reader.reload(); errorMessage = nil; statusMessage = nil }
                         catch { errorMessage = error.localizedDescription }
                     } label: {
                         Label("연결 해제", systemImage: "minus.circle")
@@ -263,40 +268,36 @@ private struct HUDConnectionSections: View {
         .onAppear { connector.checkStatus() }
     }
 
-    // 큰 카드 2개(가로) + 설명
-    @ViewBuilder private var connectCards: some View {
-        HStack(spacing: 10) {
-            HUDActionCard(
-                icon: "magnifyingglass",
-                title: isAnalyzing ? "분석 중…" : "자동 분석",
-                subtitle: "기존 사용량 데이터 탐색",
-                tint: .green,
-                disabled: isAnalyzing
-            ) { runAutoAnalyze() }
+    // 위계: 자동 분석(기본·권장) 위, HUD 직접 설치(고급) 아래
+    @ViewBuilder private var connectActions: some View {
+        // 기본 — 자동 분석 (큰 1차, 권장)
+        HUDActionCard(
+            icon: "magnifyingglass",
+            title: isAnalyzing ? "분석 중…" : "자동 분석",
+            subtitle: "기존 사용량 데이터 탐색 · 무간섭 연결",
+            tint: .green,
+            disabled: isAnalyzing
+        ) { runAutoAnalyze() }
+        .padding(.vertical, 2)
 
-            HUDActionCard(
-                icon: "arrow.triangle.2.circlepath",
-                title: "HUD 설정 및 연결",
-                subtitle: "ClaudeMonitor HUD로 연결",
-                tint: .accentColor
-            ) { runRegister() }
-        }
-        .padding(.vertical, 4)
+        Text("이미 사용량 데이터를 제공하는 HUD를 찾아, 설정을 바꾸지 않고 그대로 읽습니다.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
 
-        VStack(alignment: .leading, spacing: 4) {
-            Label {
-                Text("자동 분석 — 이미 사용량 데이터를 제공하는 HUD를 찾아, 설정을 바꾸지 않고 그대로 읽습니다.")
-            } icon: {
-                Image(systemName: "magnifyingglass").foregroundStyle(.green)
-            }
-            Label {
-                Text("HUD 설정 및 연결 — ClaudeMonitor HUD를 statusLine에 등록합니다. 기존 HUD가 있으면 보관 후 교체하며, 연결 해제 시 원래대로 복원됩니다.")
-            } icon: {
-                Image(systemName: "arrow.triangle.2.circlepath").foregroundStyle(Color.accentColor)
-            }
+        Divider().padding(.vertical, 2)
+
+        // 고급 — ClaudeMonitor HUD 직접 설치 (작은 2차)
+        Text("고급 — ClaudeMonitor HUD 직접 설치")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.secondary)
+        Text("statusLine(settings.json)에 등록합니다. 기존 HUD가 있으면 저장 후 교체하며, 연결 해제 시 복원됩니다.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        Button { runRegister() } label: {
+            Label("HUD 설정 및 연결", systemImage: "arrow.triangle.2.circlepath")
+                .font(.system(size: 12))
         }
-        .font(.caption)
-        .foregroundStyle(.secondary)
+        .controlSize(.small)
     }
 
     private func runAutoAnalyze() {
@@ -317,8 +318,9 @@ private struct HUDConnectionSections: View {
     private func runRegister() {
         do {
             try connector.register()
+            reader.reload()   // 출처/연결 상태 즉시 갱신
             errorMessage = nil
-            statusMessage = "ClaudeMonitor HUD로 연결했습니다."
+            statusMessage = "ClaudeMonitor HUD로 연결했습니다. (다음 statusLine 렌더부터 우리 HUD 표시·수신)"
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -367,11 +369,11 @@ private struct HUDConnectionSections: View {
         case .external:
             return "이미 외부 HUD가 사용량 데이터를 제공하고 있어 연결이 필요 없습니다. 그 캐시를 그대로 읽습니다(무간섭)."
         case .empty:
-            return "statusLine이 비어 있습니다. 연결하면 ~/.claude/settings.local.json에 등록해 사용량을 직접 수신합니다(기존 설정 보존)."
+            return "statusLine이 비어 있습니다. 연결하면 ~/.claude/settings.json에 등록해 사용량을 직접 수신합니다."
         case .foreign(let command):
             return "기존 statusLine 감지: \(command)\n‘자동 분석 및 연결’은 이 HUD를 그대로 두고 데이터만 읽습니다. ‘HUD 변경 및 연결’은 ClaudeMonitor HUD로 교체하며, 해제 시 원래대로 복원됩니다."
         case .registered:
-            return "~/.claude/settings.local.json에 연결됨. Claude Code 실행 시 쿼터 % 와 리셋 시각을 직접 수신합니다."
+            return "~/.claude/settings.json에 연결됨(기존 statusLine은 저장·해제 시 복원). Claude Code 실행 시 쿼터 % 와 리셋 시각을 직접 수신합니다."
         }
     }
 

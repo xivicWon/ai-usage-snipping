@@ -10,18 +10,13 @@ enum HUDLinkState: Equatable {
     case registered                // 우리가 이미 연결됨
 }
 
-/// Registers ClaudeMonitor as a Claude Code statusLine HUD — **적응형 3단** 전략으로
-/// 기존 환경에 미치는 영향을 최소화한다.
+/// Registers ClaudeMonitor as a Claude Code statusLine HUD.
 ///
-///  ① 외부 HUD(OMC 등)가 이미 rate_limits 를 캐싱 중이면 → settings 를 전혀 건드리지
-///     않는다. (읽기는 AnthropicUsageReader 가 그 캐시를 직접 본다.)
-///  ② statusLine 슬롯이 비어 있으면 → settings.local.json 에 우리 항목만 추가.
-///  ③ 다른 HUD 가 슬롯을 쓰고 있으면 → 그 명령을 보관해 두고, 우리 hud.sh 가 stdin 을
-///     캐시에 복사한 뒤 **원래 명령으로 그대로 전달**한다(체이닝). 기존 HUD 는 계속
-///     화면에 표시되고, 등록 해제 시 원래 상태로 복원된다.
-///
-/// 등록처는 항상 `~/.claude/settings.local.json` (local 이 user 설정보다 우선) 이며,
-/// 사용자의 `settings.json` 은 우리가 과거에 남긴 흔적을 정리할 때만 손댄다.
+/// 등록처는 `~/.claude/settings.json` 이다. user 레벨 `settings.local.json` 의
+/// statusLine 은 Claude Code 가 적용하지 않아(실측 확인) 우리 HUD 가 실행되지 않으므로,
+/// 실제로 동작하는 settings.json 을 사용한다. 등록 시 기존 statusLine 을 저장해 두고,
+/// 연결 해제 시 그대로 복원한다(비파괴적). 과거 버전이 settings.local.json 에 남긴
+/// 우리 항목은 등록/해제 시 정리한다.
 @MainActor
 final class ClaudeCodeHUDConnector: ObservableObject {
     static let shared = ClaudeCodeHUDConnector()
@@ -29,6 +24,23 @@ final class ClaudeCodeHUDConnector: ObservableObject {
     @Published private(set) var isRegistered = false
     @Published private(set) var lastReceivedAt: Date?
     @Published private(set) var linkState: HUDLinkState = .empty
+    /// 우리 HUD 의 표시 스타일. 변경 시 ~/.claudemonitor/hud-style 에 즉시 기록되어
+    /// 다음 렌더부터 반영된다(재등록 불필요).
+    @Published var hudStyle: String = UserDefaults.standard.string(forKey: "hudStyle") ?? "full" {
+        didSet {
+            UserDefaults.standard.set(hudStyle, forKey: "hudStyle")
+            try? writeStyleFile()
+        }
+    }
+
+    /// 선택 가능한 스타일: (식별자, 한글 라벨)
+    static let availableStyles: [(id: String, label: String)] = [
+        ("full", "전체"),
+        ("compact", "컴팩트"),
+        ("minimal", "미니멀"),
+        ("dev", "개발"),
+        ("rate", "사용량만")
+    ]
 
     private let monitorDir = URL(fileURLWithPath: NSHomeDirectory())
         .appendingPathComponent(".claudemonitor")
@@ -39,20 +51,32 @@ final class ClaudeCodeHUDConnector: ObservableObject {
     /// 우리 HUD 를 그려주는 node 렌더러 스크립트
     private let renderScriptPath = URL(fileURLWithPath: NSHomeDirectory())
         .appendingPathComponent(".claudemonitor/hud-render.mjs")
-    /// 우리가 statusLine 을 기록하는 파일 (등록처)
-    private let localSettingsPath = URL(fileURLWithPath: NSHomeDirectory())
-        .appendingPathComponent(".claude/settings.local.json")
-    /// 사용자 영역 — 읽기 + 과거에 우리가 남긴 흔적 정리 용도로만 사용
+    /// 렌더러가 읽는 스타일 선택 파일
+    private let hudStylePath = URL(fileURLWithPath: NSHomeDirectory())
+        .appendingPathComponent(".claudemonitor/hud-style")
+    /// 우리가 statusLine 을 기록하는 파일 (등록처) — 실제로 동작하는 위치
     private let settingsPath = URL(fileURLWithPath: NSHomeDirectory())
         .appendingPathComponent(".claude/settings.json")
+    /// 과거에 우리 항목을 잘못 써둔 위치 — 정리(제거) 용도로만 참조
+    private let localSettingsPath = URL(fileURLWithPath: NSHomeDirectory())
+        .appendingPathComponent(".claude/settings.local.json")
 
     private let ourCommandMarker = ".claudemonitor/hud.sh"
     private var dirWatcher: DispatchSourceFileSystemObject?
 
     private init() {
         checkStatus()
-        healIfRegistered()        // 운영중 self-heal: 망가진 항목이면 조용히 복구
+        healIfRegistered()             // 운영중 self-heal: 망가진 항목이면 조용히 복구
+        refreshScriptsIfRegistered()   // 앱 업데이트 시 최신 hud.sh/렌더러/스타일 반영
         startWatchingDir()
+    }
+
+    /// 등록된 상태라면 on-disk 스크립트를 현재 앱 버전으로 다시 쓴다(렌더러 갱신 등).
+    private func refreshScriptsIfRegistered() {
+        guard isRegistered else { return }
+        try? writeHUDScript()
+        try? writeRenderScript()
+        try? writeStyleFile()
     }
 
     // MARK: - Registration
@@ -61,42 +85,39 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         try FileManager.default.createDirectory(at: monitorDir, withIntermediateDirectories: true)
         try writeHUDScript()
         try writeRenderScript()
+        try? writeStyleFile()
 
-        // 이미 우리 항목이 local 에 있으면 형식만 보정하고 종료(복원 정보 보존)
-        if let command = statusLineCommand(in: localSettingsPath), command.contains(ourCommandMarker) {
-            try updateLocalSettings(register: true)
-            cleanupLegacyGlobalEntry()
-            checkStatus()
-            return
+        let current = statusLineDict(in: settingsPath)
+        let currentCmd = current?["command"] as? String
+        let alreadyOurs = currentCmd?.contains(ourCommandMarker) ?? false
+
+        // 기존 statusLine(우리 것 아님)을 복원용으로 저장 — 우리 것이면 기존 백업 유지
+        if !alreadyOurs {
+            if let current,
+               let data = try? JSONSerialization.data(withJSONObject: current),
+               let saved = String(data: data, encoding: .utf8) {
+                UserDefaults.standard.set(saved, forKey: "hudSavedStatusLine")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "hudSavedStatusLine")
+            }
         }
 
-        // 기존 statusLine(우리 것 아님)을 복원용으로 보관해 둔다 — 해제 시 되돌리기 위함
-        let localCmd  = statusLineCommand(in: localSettingsPath)
-        let globalCmd = statusLineCommand(in: settingsPath)
-        let foreign = [localCmd, globalCmd]
-            .compactMap { $0 }
-            .first { !$0.contains(ourCommandMarker) }
-        let foreignFromLocal = (localCmd.map { !$0.contains(ourCommandMarker) }) ?? false
-
-        UserDefaults.standard.set(foreign ?? "", forKey: "hudChainCommand")
-        UserDefaults.standard.set(foreignFromLocal, forKey: "hudChainFromLocal")
-
-        try updateLocalSettings(register: true)   // 우리 HUD 를 local 에 기록
-        cleanupLegacyGlobalEntry()
+        try writeStatusLine(["type": "command", "command": wrapperCommand], to: settingsPath)
+        removeStrayLocalEntry()   // 과거 settings.local.json 에 잘못 써둔 우리 항목 정리
         checkStatus()
     }
 
     func unregister() throws {
-        try updateLocalSettings(register: false)   // local 에서 우리 것 제거
-
-        // 보관했던 기존 HUD 가 local 출신이면 복원 (global 출신은 자동 복귀)
-        if UserDefaults.standard.bool(forKey: "hudChainFromLocal"),
-           let command = UserDefaults.standard.string(forKey: "hudChainCommand"), !command.isEmpty {
-            try restoreLocalStatusLine(command: command)
+        // 저장해 둔 원래 statusLine 복원, 없으면 우리 것 제거
+        if let saved = UserDefaults.standard.string(forKey: "hudSavedStatusLine"),
+           let data = saved.data(using: .utf8),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            try writeStatusLine(dict, to: settingsPath)
+        } else if statusLineCommand(in: settingsPath)?.contains(ourCommandMarker) == true {
+            try writeStatusLine(nil, to: settingsPath)
         }
-        UserDefaults.standard.removeObject(forKey: "hudChainCommand")
-        UserDefaults.standard.removeObject(forKey: "hudChainFromLocal")
-        cleanupLegacyGlobalEntry()
+        UserDefaults.standard.removeObject(forKey: "hudSavedStatusLine")
+        removeStrayLocalEntry()
         checkStatus()
     }
 
@@ -125,7 +146,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
     /// local 의 내 statusLine 항목이 존재하지만 형식이 잘못된 경우(예: `type` 누락,
     /// 경로 변경)에만 올바른 값으로 다시 쓴다. 정상이면 아무 것도 하지 않는다(멱등).
     func healIfRegistered() {
-        guard let statusLine = statusLineDict(in: localSettingsPath),
+        guard let statusLine = statusLineDict(in: settingsPath),
               let command = statusLine["command"] as? String,
               command.contains(ourCommandMarker) else { return }
 
@@ -133,15 +154,15 @@ final class ClaudeCodeHUDConnector: ObservableObject {
             && command == wrapperCommand
         guard !healthy else { return }
 
-        try? updateLocalSettings(register: true)
+        try? writeStatusLine(["type": "command", "command": wrapperCommand], to: settingsPath)
         checkStatus()
     }
 
     // MARK: - Status
 
     func checkStatus() {
-        let localCmd = statusLineCommand(in: localSettingsPath)
-        isRegistered = localCmd?.contains(ourCommandMarker) ?? false
+        let cmd = statusLineCommand(in: settingsPath)
+        isRegistered = cmd?.contains(ourCommandMarker) ?? false
         updateLastReceived()
 
         // 단계별 적용 버튼용 상태 판정
@@ -149,8 +170,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
             linkState = .registered
         } else if externalDataIsFresh() {
             linkState = .external
-        } else if let effective = localCmd ?? statusLineCommand(in: settingsPath),
-                  !effective.contains(ourCommandMarker) {
+        } else if let effective = cmd, !effective.contains(ourCommandMarker) {
             linkState = .foreign(command: effective)
         } else {
             linkState = .empty
@@ -240,13 +260,19 @@ final class ClaudeCodeHUDConnector: ObservableObject {
           blu: E + '[34m', mag: E + '[35m', cyn: E + '[36m', org: E + '[38;5;208m'
         };
         const lvl = (p) => (p >= 80 ? C.red : p >= 50 ? C.yel : C.grn);
-        const seg = [];
+
+        const DIR = (process.env.HOME || '') + '/.claudemonitor';
+        let style = 'full';
+        try { style = (fs.readFileSync(DIR + '/hud-style', 'utf8').trim()) || 'full'; } catch { }
+
+        // 명명된 세그먼트를 만들어 두고, 스타일이 그중 일부를 골라 출력한다.
+        const P = {};
 
         const ver = d.version || '';
-        seg.push(C.cyn + '[CC#' + ver + ']' + C.r);
+        P.ver = C.cyn + '[CC#' + ver + ']' + C.r;
 
         const model = (d.model && (d.model.display_name || d.model.id)) || '';
-        if (model) seg.push(C.mag + '◆ ' + model + C.r);
+        if (model) P.model = C.mag + '◆ ' + model + C.r;
 
         // transcript 꼬리에서 action / tool / agent 추출
         let action = '', tool = '', agent = '';
@@ -281,14 +307,14 @@ final class ClaudeCodeHUDConnector: ObservableObject {
             }
           }
         } catch { }
-        if (action) seg.push(C.gray + '▸ ' + action + C.r);
+        if (action) P.action = C.gray + '▸ ' + action + C.r;
 
         const sid = (d.session_id || '').slice(0, 6);
-        if (sid) seg.push(C.dim + '#' + sid + C.r);
+        if (sid) P.sid = C.dim + '#' + sid + C.r;
 
         const cw = d.context_window;
         if (cw && typeof cw.used_percentage === 'number') {
-          seg.push(C.gray + 'ctx ' + C.r + lvl(cw.used_percentage) + Math.round(cw.used_percentage) + '%' + C.r);
+          P.ctx = C.gray + 'ctx ' + C.r + lvl(cw.used_percentage) + Math.round(cw.used_percentage) + '%' + C.r;
         }
 
         const fmtReset = (ts) => {
@@ -303,77 +329,69 @@ final class ClaudeCodeHUDConnector: ObservableObject {
           return C.gray + label + ' ' + C.r + lvl(o.used_percentage) + Math.round(o.used_percentage) + '%' + C.dim + fmtReset(o.resets_at) + C.r;
         };
         const rl = d.rate_limits || {};
-        const r5 = rate('5h', rl.five_hour); if (r5) seg.push(r5);
-        const rw = rate('wk', rl.seven_day); if (rw) seg.push(rw);
+        const r5 = rate('5h', rl.five_hour); if (r5) P['5h'] = r5;
+        const rw = rate('wk', rl.seven_day); if (rw) P.wk = rw;
 
         let branch = '';
         try {
           const dir = (d.workspace && d.workspace.current_dir) || d.cwd || '.';
           branch = execSync('git -C "' + dir + '" rev-parse --abbrev-ref HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
         } catch { }
-        if (branch) seg.push(C.cyn + 'git:' + branch + C.r);
+        if (branch) P.git = C.cyn + 'git:' + branch + C.r;
 
-        if (tool) seg.push(C.blu + 'tool:' + tool + C.r);
-        if (agent) seg.push(C.org + '@' + agent + C.r);
+        if (tool) P.tool = C.blu + 'tool:' + tool + C.r;
+        if (agent) P.agent = C.org + '@' + agent + C.r;
 
         if (d.cost && typeof d.cost.total_cost_usd === 'number') {
-          seg.push(C.dim + '$' + d.cost.total_cost_usd.toFixed(2) + C.r);
+          P.cost = C.dim + '$' + d.cost.total_cost_usd.toFixed(2) + C.r;
         }
 
+        const STYLES = {
+          full:    ['ver', 'model', 'action', 'sid', 'ctx', '5h', 'wk', 'git', 'tool', 'agent', 'cost'],
+          compact: ['model', 'ctx', '5h', 'wk', 'git'],
+          minimal: ['model', '5h', 'wk'],
+          dev:     ['model', 'ctx', 'git', 'tool', 'agent', 'cost'],
+          rate:    ['5h', 'wk']
+        };
+        const order = STYLES[style] || STYLES.full;
+        const seg = order.map((k) => P[k]).filter(Boolean);
         process.stdout.write(seg.join(C.gray + ' │ ' + C.r));
         """
         try script.write(to: renderScriptPath, atomically: true, encoding: .utf8)
     }
 
-    /// settings.local.json 에 statusLine 을 병합/제거한다. 기존 키(permissions, hooks 등)는 보존.
-    private func updateLocalSettings(register: Bool) throws {
+    /// 선택된 스타일을 ~/.claudemonitor/hud-style 에 기록한다. 렌더러가 매 렌더마다 읽는다.
+    private func writeStyleFile() throws {
+        try FileManager.default.createDirectory(at: monitorDir, withIntermediateDirectories: true)
+        try hudStyle.write(to: hudStylePath, atomically: true, encoding: .utf8)
+    }
+
+    /// 주어진 설정 파일에 statusLine 을 병합 기록(nil 이면 키 제거). 다른 키는 보존.
+    private func writeStatusLine(_ statusLine: [String: Any]?, to url: URL) throws {
         try FileManager.default.createDirectory(
-            at: localSettingsPath.deletingLastPathComponent(), withIntermediateDirectories: true)
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
 
         var json: [String: Any] = [:]
-        if let data = try? Data(contentsOf: localSettingsPath),
+        if let data = try? Data(contentsOf: url),
            let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             json = existing
         }
 
-        if register {
-            // Claude Code statusLine 스키마는 type 필수 — 누락 시 /doctor 가 오류로 표시
-            json["statusLine"] = ["type": "command", "command": wrapperCommand]
-        } else if let statusLine = json["statusLine"] as? [String: Any],
-                  let command = statusLine["command"] as? String,
-                  command.contains(ourCommandMarker) {
-            // '내 것'일 때만 제거 — 사용자가 따로 지정한 statusLine 은 건드리지 않음
+        if let statusLine {
+            json["statusLine"] = statusLine
+        } else {
             json.removeValue(forKey: "statusLine")
         }
 
         let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
-        try data.write(to: localSettingsPath, options: .atomic)
+        try data.write(to: url, options: .atomic)
     }
 
-    private func restoreLocalStatusLine(command: String) throws {
-        var json: [String: Any] = [:]
-        if let data = try? Data(contentsOf: localSettingsPath),
-           let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            json = existing
-        }
-        json["statusLine"] = ["type": "command", "command": command]
-        let data = try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys])
-        try data.write(to: localSettingsPath, options: .atomic)
-    }
-
-    /// 과거 버전이 ~/.claude/settings.json 에 직접 써둔 우리 statusLine 을 제거한다.
-    /// 이제 등록처는 settings.local.json 이므로 사용자 영역엔 흔적을 남기지 않는다.
-    /// '우리 것'(`.claudemonitor/hud.sh`)일 때만 제거 — 사용자가 직접 만든 statusLine 은 그대로 둔다.
-    private func cleanupLegacyGlobalEntry() {
-        guard let data = try? Data(contentsOf: settingsPath),
-              var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let statusLine = json["statusLine"] as? [String: Any],
-              let command = statusLine["command"] as? String,
+    /// 과거 버전이 ~/.claude/settings.local.json 에 잘못 써둔 우리 statusLine 을 제거한다
+    /// (user-local 은 statusLine 에 적용되지 않아 무의미). '우리 것'일 때만 제거.
+    private func removeStrayLocalEntry() {
+        guard let command = statusLineCommand(in: localSettingsPath),
               command.contains(ourCommandMarker) else { return }
-
-        json.removeValue(forKey: "statusLine")
-        guard let out = try? JSONSerialization.data(
-            withJSONObject: json, options: [.prettyPrinted, .sortedKeys]) else { return }
-        try? out.write(to: settingsPath, options: .atomic)
+        try? writeStatusLine(nil, to: localSettingsPath)
     }
 }
