@@ -17,14 +17,18 @@ struct AnthropicUsage {
     func timeUntilReset(_ date: Date?) -> String? {
         guard let date else { return nil }
         let diff = date.timeIntervalSinceNow
-        guard diff > 0 else { return "곧 리셋" }
-        if diff < 3600 {
-            return String(format: "%.0f분 후 리셋", diff / 60)
-        } else if diff < 86400 {
-            return String(format: "%.1f시간 후 리셋", diff / 3600)
+        guard diff > 0 else { return "곧 갱신" }
+
+        let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "ko_KR")
+
+        let cal = Calendar.current
+        if cal.isDateInToday(date) {
+            fmt.dateFormat = "a h:mm"   // 오후 7:09
         } else {
-            return String(format: "%.0f일 후 리셋", diff / 86400)
+            fmt.dateFormat = "M/d a h:mm"  // 7/3 오전 1:59
         }
+        return fmt.string(from: date) + " 갱신"
     }
 }
 
