@@ -62,16 +62,24 @@ final class AppState: ObservableObject {
     }
 
     private func scanAll(projectsURL: URL) async {
-        let fm = FileManager.default
-        guard let enumerator = fm.enumerator(
-            at: projectsURL,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        ) else { return }
+        // Run file I/O on a background queue so the main actor / UI stays responsive
+        let store = self.store
+        let parser = self.parser
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .utility).async {
+                let fm = FileManager.default
+                guard let enumerator = fm.enumerator(
+                    at: projectsURL,
+                    includingPropertiesForKeys: nil,
+                    options: [.skipsHiddenFiles]
+                ) else { continuation.resume(); return }
 
-        for case let url as URL in enumerator where url.pathExtension == "jsonl" {
-            if let records = try? parser.parseNew(in: url), !records.isEmpty {
-                try? store.insert(records)
+                for case let url as URL in enumerator where url.pathExtension == "jsonl" {
+                    if let records = try? parser.parseNew(in: url), !records.isEmpty {
+                        try? store.insert(records)
+                    }
+                }
+                continuation.resume()
             }
         }
     }
