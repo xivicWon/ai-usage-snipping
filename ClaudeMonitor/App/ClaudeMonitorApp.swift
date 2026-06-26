@@ -32,12 +32,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let pop = NSPopover()
-        pop.contentSize = NSSize(width: 260, height: 240)
         pop.behavior = .transient
-        pop.contentViewController = NSHostingController(
-            rootView: MenuBarView(openDashboard: { [weak self] in self?.openDashboard() })
-                .environmentObject(appState)
-        )
+        let menuView = MenuBarView(openDashboard: { [weak self] in self?.openDashboard() })
+            .environmentObject(appState)
+        let hc = NSHostingController(rootView: menuView)
+        if #available(macOS 13.0, *) {
+            hc.sizingOptions = .preferredContentSize
+        }
+        pop.contentViewController = hc
         popover = pop
 
         // Update title from Anthropic usage cache (real quota %) or token count fallback

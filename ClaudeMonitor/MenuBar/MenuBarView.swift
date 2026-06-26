@@ -30,70 +30,137 @@ struct WaterTankView: View {
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject private var usageReader = AnthropicUsageReader.shared
-    @ObservedObject private var sessions = SessionReader.shared
+    @ObservedObject private var sessions   = SessionReader.shared
+    @ObservedObject private var codexReader = CodexSessionReader.shared
     let openDashboard: () -> Void
+
+    // Claude: Anthropic usage cache exists
+    private var isClaudeConnected: Bool { usageReader.usage != nil }
+    // Codex: at least one archived session exists
+    private var isCodexConnected: Bool { !codexReader.sessions.isEmpty }
+
+    private enum ConnectionState {
+        case none, claudeOnly, codexOnly, both
+    }
+    private var connectionState: ConnectionState {
+        switch (isClaudeConnected, isCodexConnected) {
+        case (false, false): return .none
+        case (true,  false): return .claudeOnly
+        case (false, true):  return .codexOnly
+        case (true,  true):  return .both
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            planRow
-            Divider()
-            usageRow
+            switch connectionState {
+            case .none:
+                emptyStateView
+            case .claudeOnly:
+                claudeHeader
+                Divider()
+                claudeUsageRow
+            case .codexOnly:
+                codexHeader
+                Divider()
+                codexUsageRow
+            case .both:
+                claudeHeader
+                Divider()
+                claudeUsageRow
+                Divider()
+                codexHeader
+                Divider()
+                codexUsageRow
+            }
             Divider()
             menuButtons
         }
         .frame(width: 240)
     }
 
-    // MARK: - Plan row
+    // MARK: - Empty state
 
-    private var planRow: some View {
+    private var emptyStateView: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkle")
+                    .foregroundStyle(.tertiary)
+                Image(systemName: "terminal")
+                    .foregroundStyle(.tertiary)
+            }
+            .font(.system(size: 18))
+            Text("연결된 AI 없음")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+            Text("Claude 또는 Codex를 시작하세요")
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+        .padding(.horizontal, 12)
+    }
+
+    // MARK: - Claude section
+
+    private var claudeHeader: some View {
         HStack(spacing: 6) {
             Image(systemName: "sparkle")
                 .font(.system(size: 10))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.orange)
             Text("Claude")
-                .font(.system(size: 10, weight: .medium))
+                .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.primary)
             Spacer()
             HStack(spacing: 3) {
                 Circle()
                     .fill(sessions.activeCount > 0 ? Color.green : Color.secondary.opacity(0.35))
                     .frame(width: 6, height: 6)
-                Text("\(sessions.activeCount)")
+                Text("\(sessions.activeCount) 활성")
                     .font(.system(size: 9))
                     .foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
+        .background(connectionState == .both ? Color.orange.opacity(0.05) : Color.clear)
     }
 
-    // MARK: - Usage row (two tanks side by side)
-
-    private var usageRow: some View {
-        let fiveResetDate  = usageReader.usage?.fiveHourResetsAt
-        let weekResetDate  = usageReader.usage?.weeklyResetsAt
+    private var claudeUsageRow: some View {
+        let fiveResetDate = usageReader.usage?.fiveHourResetsAt
+        let weekResetDate = usageReader.usage?.weeklyResetsAt
         let u = usageReader.usage
+        let compact = connectionState == .both
+
         return HStack(spacing: 0) {
             tankBlock(
                 label: "5시간 창",
                 pct: appState.windowPercentRemaining,
                 reset: u?.shortTimeUntilReset(fiveResetDate),
-                resetMinutes: u?.minutesUntilReset(fiveResetDate)
+                resetMinutes: u?.minutesUntilReset(fiveResetDate),
+                compact: compact
             )
             Divider()
             tankBlock(
                 label: "이번 주",
                 pct: appState.weeklyPercentRemaining,
                 reset: u?.timeUntilReset(weekResetDate),
-                resetMinutes: u?.minutesUntilReset(weekResetDate)
+                resetMinutes: u?.minutesUntilReset(weekResetDate),
+                compact: compact
             )
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, compact ? 6 : 10)
     }
 
-    private func tankBlock(label: String, pct: Double?, reset: String?, resetMinutes: Double?) -> some View {
-        VStack(spacing: 4) {
+    private func tankBlock(label: String, pct: Double?, reset: String?,
+                           resetMinutes: Double?, compact: Bool) -> some View {
+        let tankH: CGFloat = compact ? 34 : 52
+        let tankW: CGFloat = compact ? 24 : 32
+        let numSize: CGFloat = compact ? 13 : 16
+
+        return VStack(spacing: compact ? 2 : 4) {
             Text(label)
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(.tertiary)
@@ -101,16 +168,16 @@ struct MenuBarView: View {
 
             if let pct {
                 WaterTankView(pct: pct, color: pctColor(pct))
-                    .frame(width: 32, height: 52)
+                    .frame(width: tankW, height: tankH)
                 Text(String(format: "%.0f%%", pct * 100))
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .font(.system(size: numSize, weight: .bold, design: .monospaced))
                     .foregroundStyle(pctColor(pct))
             } else {
                 RoundedRectangle(cornerRadius: 5)
                     .fill(Color.secondary.opacity(0.1))
-                    .frame(width: 32, height: 52)
+                    .frame(width: tankW, height: tankH)
                 Text("--")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .font(.system(size: numSize, weight: .bold, design: .monospaced))
                     .foregroundStyle(.secondary)
             }
 
@@ -123,20 +190,93 @@ struct MenuBarView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func resetColor(_ minutes: Double?) -> Color {
-        guard let m = minutes else { return Color.secondary.opacity(0.3) }
-        guard m > 0 else { return .red }
-        if m > 60 { return .green }
-        if m > 20 { return .orange }
-        return .red
+    // MARK: - Codex section
+
+    private var codexHeader: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "terminal")
+                .font(.system(size: 10))
+                .foregroundStyle(.blue)
+            Text("Codex")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.primary)
+            Spacer()
+            HStack(spacing: 3) {
+                let todayCount = codexReader.sessions.filter {
+                    Calendar.current.isDateInToday($0.startedAt)
+                }.count
+                Circle()
+                    .fill(todayCount > 0 ? Color.blue : Color.secondary.opacity(0.35))
+                    .frame(width: 6, height: 6)
+                Text("\(todayCount) 오늘")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(connectionState == .both ? Color.blue.opacity(0.05) : Color.clear)
     }
 
-    private func pctColor(_ pct: Double) -> Color {
-        switch pct {
-        case 0.5...: return .green
-        case 0.2..<0.5: return .orange
-        default: return .red
+    private var codexUsageRow: some View {
+        let usedPct = codexReader.primaryUsedPercent / 100.0   // convert to 0–1
+        let compact = connectionState == .both
+
+        return HStack(spacing: 0) {
+            // 5시간 quota bar (horizontal)
+            VStack(spacing: compact ? 2 : 4) {
+                Text("5시간 사용률")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.secondary.opacity(0.1))
+                        .frame(height: 8)
+                    GeometryReader { geo in
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(codexPctColor(usedPct))
+                            .frame(width: geo.size.width * min(usedPct, 1.0), height: 8)
+                            .animation(.easeInOut(duration: 0.5), value: usedPct)
+                    }
+                    .frame(height: 8)
+                }
+                .frame(height: 8)
+
+                Text(String(format: "%.0f%% 사용", usedPct * 100))
+                    .font(.system(size: compact ? 12 : 14, weight: .bold, design: .monospaced))
+                    .foregroundStyle(codexPctColor(usedPct))
+
+                if let resetsAt = codexReader.primaryResetsAt {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.clockwise").font(.system(size: 8))
+                        Text(timeUntilLabel(resetsAt)).font(.system(size: 9))
+                    }
+                    .foregroundStyle(resetColor(resetsAt.timeIntervalSinceNow / 60))
+                }
+            }
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
+
+            Divider()
+
+            // Today / weekly tokens
+            VStack(spacing: compact ? 2 : 4) {
+                Text("오늘 토큰")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+                Text(fmtTokens(codexReader.todayTokens))
+                    .font(.system(size: compact ? 12 : 14, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.blue)
+                Text("주간 \(fmtTokens(codexReader.weeklyTokens))")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.tertiary)
+            }
+            .frame(maxWidth: .infinity)
         }
+        .padding(.vertical, compact ? 6 : 10)
     }
 
     // MARK: - Buttons
@@ -176,5 +316,46 @@ struct MenuBarView: View {
             NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: nil)
         }
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Helpers
+
+    private func pctColor(_ pct: Double) -> Color {
+        switch pct {
+        case 0.5...: return .green
+        case 0.2..<0.5: return .orange
+        default: return .red
+        }
+    }
+
+    private func codexPctColor(_ usedPct: Double) -> Color {
+        switch usedPct {
+        case ..<0.5: return .blue
+        case 0.5..<0.8: return .orange
+        default: return .red
+        }
+    }
+
+    private func resetColor(_ minutes: Double?) -> Color {
+        guard let m = minutes else { return Color.secondary.opacity(0.3) }
+        guard m > 0 else { return .red }
+        if m > 60 { return .green }
+        if m > 20 { return .orange }
+        return .red
+    }
+
+    private func timeUntilLabel(_ date: Date) -> String {
+        let diff = date.timeIntervalSinceNow
+        guard diff > 0 else { return "곧 갱신" }
+        if diff < 3600 { return String(format: "%.0f분 후", diff / 60) }
+        return String(format: "%.0f시간 후", diff / 3600)
+    }
+
+    private func fmtTokens(_ n: Int) -> String {
+        switch n {
+        case 0..<1_000: return "\(n)"
+        case 1_000..<1_000_000: return String(format: "%.1fK", Double(n) / 1_000)
+        default: return String(format: "%.1fM", Double(n) / 1_000_000)
+        }
     }
 }
