@@ -4,6 +4,10 @@ macOS menu-bar app that tracks Claude Code and OpenAI Codex token usage in real 
 
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange) ![Version](https://img.shields.io/badge/version-1.1.3-green)
 
+**English** · [한국어](README.ko.md)
+
+---
+
 ## Features
 
 - **Menu-bar live stats** — 5-hour rolling window and weekly usage displayed as water-tank gauges
