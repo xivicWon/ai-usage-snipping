@@ -3,6 +3,8 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject private var limits = UsageLimits.shared
+    @State private var autoCalcMessage: String?
+    @State private var isCalculating = false
 
     var body: some View {
         TabView {
@@ -23,11 +25,97 @@ struct SettingsView: View {
                 Toggle("Claude 모니터링 사용", isOn: $limits.claudeEnabled)
             }
 
+            rateThresholdSection
+
             // Claude Code HUD 연결 — 이전 '연결' 탭을 Claude 탭으로 통합
             HUDConnectionSections()
         }
         .formStyle(.grouped)
     }
+
+    // MARK: - 처리율 게이지 임계값
+
+    private var rateThresholdSection: some View {
+        Section {
+            rateRow(title: "기본 (1단계)", color: .green,   value: $limits.rateLevel1Min)
+            rateRow(title: "많음 (2단계)", color: .orange,  value: $limits.rateLevel2Min)
+            rateRow(title: "폭발적 (3단계)", color: .red,   value: $limits.rateLevel3Min)
+
+            HStack {
+                Button {
+                    autoCalculateThresholds()
+                } label: {
+                    if isCalculating {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Label("자동 계산 (최근 30일)", systemImage: "wand.and.stars")
+                    }
+                }
+                .disabled(isCalculating)
+
+                Spacer()
+
+                Button("기본값으로 복원") {
+                    limits.resetRateThresholds()
+                    autoCalcMessage = nil
+                }
+            }
+
+            if let msg = autoCalcMessage {
+                Text(msg).font(.caption).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("토큰 처리율 게이지")
+        } footer: {
+            Text("분당 input+output 토큰이 각 값 이상이면 해당 단계로 점등됩니다. '자동 계산'은 최근 30일 사용 분포의 p20·중앙값·p90으로 값을 산출합니다.")
+                .foregroundStyle(.secondary)
+                .font(.caption)
+        }
+    }
+
+    /// 최근 30일 사용량 분포에서 임계값을 자동 산출해 적용한다. (활성 프로필 DB 직접 조회)
+    private func autoCalculateThresholds() {
+        isCalculating = true
+        autoCalcMessage = nil
+        DispatchQueue.global(qos: .userInitiated).async {
+            let profileId = ProfileStore.shared.activeProfile?.id
+            let result = (try? SQLiteStore(profileId: profileId))
+                .flatMap { try? $0.suggestedRateThresholds(days: 30) }
+            DispatchQueue.main.async {
+                isCalculating = false
+                if let t = result {
+                    limits.rateLevel1Min = t.level1
+                    limits.rateLevel2Min = t.level2
+                    limits.rateLevel3Min = t.level3
+                    autoCalcMessage = "산출 완료 — \(t.level1) / \(t.level2) / \(t.level3) 토큰/분으로 적용했습니다."
+                } else {
+                    autoCalcMessage = "데이터가 부족해 산출할 수 없습니다 (최근 30일 활동 분 20개 미만)."
+                }
+            }
+        }
+    }
+
+    private func rateRow(title: String, color: Color, value: Binding<Int>) -> some View {
+        HStack {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(title)
+            Spacer()
+            TextField("", value: value, formatter: Self.tokenFormatter)
+                .multilineTextAlignment(.trailing)
+                .frame(width: 90)
+                .textFieldStyle(.roundedBorder)
+            Text("토큰/분").foregroundStyle(.secondary).font(.caption)
+        }
+    }
+
+    private static let tokenFormatter: NumberFormatter = {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.minimum = 0
+        f.maximum = 10_000_000
+        f.allowsFloats = false
+        return f
+    }()
 
     // MARK: - Codex tab
 
