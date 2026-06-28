@@ -95,16 +95,16 @@ struct MenuBarView: View {
     let openDashboard: () -> Void
     let openSettings: () -> Void
 
-    // Claude: 사용 설정 ON + Anthropic usage cache exists
-    private var isClaudeConnected: Bool { limits.claudeEnabled && usageReader.usage != nil }
-    // Codex: 사용 설정 ON + at least one archived session exists
-    private var isCodexConnected: Bool { limits.codexEnabled && !codexReader.sessions.isEmpty }
+    // 실제 데이터가 들어오는지(=연결됨) 여부 — 헤더의 상태 점으로만 표시한다.
+    private var isClaudeConnected: Bool { usageReader.usage != nil }
+    private var isCodexConnected: Bool { !codexReader.sessions.isEmpty }
 
     private enum ConnectionState {
         case none, claudeOnly, codexOnly, both
     }
+    // 섹션 표시(레이아웃)는 설정 토글이 기준 — 데이터 유무와 무관하게 일단 보여준다.
     private var connectionState: ConnectionState {
-        switch (isClaudeConnected, isCodexConnected) {
+        switch (limits.claudeEnabled, limits.codexEnabled) {
         case (false, false): return .none
         case (true,  false): return .claudeOnly
         case (false, true):  return .codexOnly
@@ -156,10 +156,10 @@ struct MenuBarView: View {
                     .frame(width: 22, height: 22)
                     .foregroundStyle(.tertiary)
             }
-            Text("연결된 AI 없음")
+            Text("표시할 항목 없음")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
-            Text("Claude 또는 Codex를 시작하세요")
+            Text("설정에서 Claude 또는 Codex를 켜세요")
                 .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -182,9 +182,9 @@ struct MenuBarView: View {
             Spacer()
             HStack(spacing: 3) {
                 Circle()
-                    .fill(sessions.activeCount > 0 ? Color.green : Color.secondary.opacity(0.35))
+                    .fill(isClaudeConnected ? Color.green : Color.secondary.opacity(0.35))
                     .frame(width: 6, height: 6)
-                Text("\(sessions.activeCount) 활성")
+                Text(isClaudeConnected ? "\(sessions.activeCount) 활성" : "대기 중")
                     .font(.system(size: 9))
                     .foregroundStyle(.secondary)
             }
