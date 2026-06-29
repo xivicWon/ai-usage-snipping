@@ -13,7 +13,7 @@ struct SettingsView: View {
             codexTab
                 .tabItem { Label("Codex", systemImage: "terminal") }
         }
-        .frame(width: 460, height: 420)
+        .frame(width: 480, height: 520)
         .padding()
     }
 
@@ -286,29 +286,12 @@ private struct HUDConnectionSections: View {
                         Text("채움").tag(true)
                         Text("비움").tag(false)
                     }.pickerStyle(.segmented)
-                    Picker("배치", selection: $connector.hudMultiline) {
-                        Text("행분리").tag(true)
-                        Text("인라인").tag(false)
-                    }.pickerStyle(.segmented)
-
-                    // 표시 항목 — 체크박스
-                    Text("표시 항목")
+                    // 레이아웃 — 드래그 앤 드롭으로 행 배치
+                    Text("레이아웃")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading),
-                                        GridItem(.flexible(), alignment: .leading)], spacing: 2) {
-                        ForEach(ClaudeCodeHUDConnector.availableFields, id: \.id) { f in
-                            Toggle(f.label, isOn: Binding(
-                                get: { connector.hudFields.contains(f.id) },
-                                set: { on in
-                                    if on { connector.hudFields.insert(f.id) }
-                                    else { connector.hudFields.remove(f.id) }
-                                }))
-                            .toggleStyle(.checkbox)
-                            .font(.system(size: 11))
-                        }
-                    }
+                    HudLayoutEditor(connector: connector)
 
                     Button(role: .destructive) {
                         do { try connector.unregister(); reader.reload(); errorMessage = nil; statusMessage = nil }
@@ -512,5 +495,300 @@ private struct HUDConnectionSections: View {
         if diff < 60    { return "\(diff)초 전" }
         if diff < 3600  { return "\(diff/60)분 전" }
         return "\(diff/3600)시간 전"
+    }
+}
+
+// MARK: - HUD 레이아웃 에디터 (드래그 앤 드롭)
+
+private struct HudLayoutEditor: View {
+    @ObservedObject var connector: ClaudeCodeHUDConnector
+
+    private var activeRowIndices: [Int] {
+        var seen = Set<Int>()
+        for f in ClaudeCodeHUDConnector.availableFields where connector.hudFields.contains(f.id) {
+            let r = connector.hudFieldRows[f.id]
+                ?? ClaudeCodeHUDConnector.defaultFieldRows[f.id]
+                ?? 0
+            seen.insert(r)
+        }
+        return seen.sorted()
+    }
+
+    private func fields(inRow row: Int) -> [(id: String, label: String)] {
+        ClaudeCodeHUDConnector.availableFields.filter {
+            connector.hudFields.contains($0.id) &&
+            (connector.hudFieldRows[$0.id] ?? ClaudeCodeHUDConnector.defaultFieldRows[$0.id] ?? 0) == row
+        }
+    }
+
+    private var inactiveFields: [(id: String, label: String)] {
+        ClaudeCodeHUDConnector.availableFields.filter { !connector.hudFields.contains($0.id) }
+    }
+
+    private var nextRowIndex: Int { (activeRowIndices.max() ?? -1) + 1 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(activeRowIndices, id: \.self) { row in
+                HudRowZone(rowIndex: row, fields: fields(inRow: row),
+                           isNewRow: false, connector: connector)
+            }
+            HudRowZone(rowIndex: nextRowIndex, fields: [],
+                       isNewRow: true, connector: connector)
+
+            Divider().padding(.vertical, 2)
+
+            HudInactiveZone(fields: inactiveFields, connector: connector)
+        }
+    }
+}
+
+// MARK: - 행 드롭 존
+
+private struct HudRowZone: View {
+    let rowIndex: Int
+    let fields: [(id: String, label: String)]
+    let isNewRow: Bool
+    @ObservedObject var connector: ClaudeCodeHUDConnector
+    @State private var isTargeted = false
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Group {
+                if isNewRow {
+                    Text("행\(rowIndex)")
+                        .foregroundStyle(Color.secondary.opacity(0.35))
+                } else {
+                    // 행 레이블 자체를 드래그 → 행 순서 변경
+                    HStack(spacing: 2) {
+                        Image(systemName: "line.3.horizontal")
+                            .font(.system(size: 8))
+                            .foregroundStyle(Color.secondary.opacity(0.5))
+                        Text("행\(rowIndex)")
+                            .foregroundStyle(.secondary)
+                    }
+                    .onDrag {
+                        NSItemProvider(object: "row:\(rowIndex)" as NSString)
+                    }
+                    .help("드래그해서 행 순서 변경")
+                }
+            }
+            .font(.system(size: 10, weight: .medium, design: .monospaced))
+            .frame(width: 38, alignment: .trailing)
+
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(isTargeted
+                          ? Color.accentColor.opacity(0.10)
+                          : Color.secondary.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7)
+                            .strokeBorder(
+                                isTargeted ? Color.accentColor.opacity(0.6) : Color.secondary.opacity(0.18),
+                                style: StrokeStyle(lineWidth: 1,
+                                                   dash: isNewRow ? [5, 3] : [])
+                            )
+                    )
+
+                if fields.isEmpty {
+                    Text(isNewRow ? "여기로 드래그하면 새 행이 됩니다" : "비어 있음 — 드래그해서 채우세요")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.secondary.opacity(0.45))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 9)
+                } else {
+                    HStack(spacing: 4) {
+                        ForEach(fields, id: \.id) { f in
+                            HudFieldChip(fieldId: f.id, label: f.label, connector: connector)
+                        }
+                    }
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 6)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 38)
+            .onDrop(of: ["public.plain-text"], isTargeted: $isTargeted) { providers in
+                guard let provider = providers.first else { return false }
+                _ = provider.loadObject(ofClass: NSString.self) { obj, _ in
+                    guard let str = obj as? String, !str.isEmpty else { return }
+                    DispatchQueue.main.async {
+                        if str.hasPrefix("row:"), let srcRow = Int(str.dropFirst(4)) {
+                            // 행 순서 교환 (새 행 존으로는 무시)
+                            if !isNewRow { connector.swapRows(srcRow, rowIndex) }
+                        } else {
+                            // 항목 이동
+                            connector.hudFields.insert(str)
+                            connector.hudFieldRows[str] = rowIndex
+                        }
+                    }
+                }
+                return true
+            }
+        }
+    }
+}
+
+// MARK: - 비활성 드롭 존
+
+private struct HudInactiveZone: View {
+    let fields: [(id: String, label: String)]
+    @ObservedObject var connector: ClaudeCodeHUDConnector
+    @State private var isTargeted = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("비활성 — 드래그해서 행에 추가")
+                .font(.system(size: 10))
+                .foregroundStyle(.secondary)
+
+            ZStack(alignment: .topLeading) {
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(isTargeted
+                          ? Color.secondary.opacity(0.12)
+                          : Color.secondary.opacity(0.05))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7)
+                            .strokeBorder(Color.secondary.opacity(0.18), lineWidth: 1)
+                    )
+
+                if fields.isEmpty {
+                    Text("모든 항목이 활성화됨")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.secondary.opacity(0.45))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 9)
+                } else {
+                    HudChipFlow(fields: fields, connector: connector)
+                        .padding(6)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 38)
+            .onDrop(of: ["public.plain-text"], isTargeted: $isTargeted) { providers in
+                guard let provider = providers.first else { return false }
+                _ = provider.loadObject(ofClass: NSString.self) { obj, _ in
+                    guard let str = obj as? String, !str.hasPrefix("row:") else { return }
+                    DispatchQueue.main.async {
+                        connector.hudFields.remove(str)
+                    }
+                }
+                return true
+            }
+        }
+    }
+}
+
+// MARK: - 칩 플로우 (줄바꿈 지원)
+
+private struct HudChipFlow: View {
+    let fields: [(id: String, label: String)]
+    @ObservedObject var connector: ClaudeCodeHUDConnector
+
+    var body: some View {
+        // LazyVGrid로 자동 줄바꿈 처리
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 72, maximum: 140), spacing: 4)],
+            alignment: .leading,
+            spacing: 4
+        ) {
+            ForEach(fields, id: \.id) { f in
+                HudFieldChip(fieldId: f.id, label: f.label, connector: connector)
+            }
+        }
+    }
+}
+
+// MARK: - 드래그 가능한 항목 칩
+
+private struct HudFieldChip: View {
+    let fieldId: String
+    let label: String
+    @ObservedObject var connector: ClaudeCodeHUDConnector
+
+    private var currentColor: String {
+        connector.hudFieldColors[fieldId] ?? "auto"
+    }
+
+    var body: some View {
+        ZStack {
+            // ① 시각 레이어 — 색상·텍스트·화살표를 직접 렌더
+            HStack(spacing: 5) {
+                Circle()
+                    .fill(swatchColor(currentColor))
+                    .frame(width: 7, height: 7)
+                Text(label)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .foregroundStyle(.primary)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .semibold))
+                    .foregroundStyle(.secondary.opacity(0.6))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+
+            // ② 인터랙션 레이어 — 투명 Menu가 칩 전체를 덮음
+            Menu {
+                ForEach(ClaudeCodeHUDConnector.colorOptions, id: \.id) { c in
+                    Button {
+                        if c.id == "auto" {
+                            connector.hudFieldColors[fieldId] = nil
+                        } else {
+                            connector.hudFieldColors[fieldId] = c.id
+                        }
+                    } label: {
+                        Label(c.label,
+                              systemImage: currentColor == c.id ? "checkmark" : "circle.fill")
+                    }
+                }
+            } label: {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
+            }
+            .menuStyle(.borderlessButton)
+            .menuIndicator(.hidden)
+        }
+        .fixedSize()
+        .background(RoundedRectangle(cornerRadius: 5).fill(chipBgColor))
+        .overlay(
+            RoundedRectangle(cornerRadius: 5).strokeBorder(chipBorderColor, lineWidth: 1)
+        )
+        .onDrag {
+            NSItemProvider(object: fieldId as NSString)
+        }
+    }
+
+    private var chipBgColor: Color {
+        let name = currentColor
+        if name == "auto" {
+            return connector.hudFields.contains(fieldId)
+                ? Color.accentColor.opacity(0.11)
+                : Color.secondary.opacity(0.09)
+        }
+        return swatchColor(name).opacity(0.18)
+    }
+
+    private var chipBorderColor: Color {
+        let name = currentColor
+        if name == "auto" {
+            return connector.hudFields.contains(fieldId)
+                ? Color.accentColor.opacity(0.28)
+                : Color.secondary.opacity(0.18)
+        }
+        return swatchColor(name).opacity(0.55)
+    }
+
+    private func swatchColor(_ name: String) -> Color {
+        switch name {
+        case "blue":    return .blue
+        case "purple":  return .purple
+        case "green":   return .green
+        case "yellow":  return .yellow
+        case "cyan":    return .cyan
+        case "orange":  return .orange
+        case "red":     return .red
+        case "gray":    return .gray
+        default:        return Color.secondary.opacity(0.4)
+        }
     }
 }
