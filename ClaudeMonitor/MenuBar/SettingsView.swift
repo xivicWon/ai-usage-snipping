@@ -515,10 +515,19 @@ private struct HudLayoutEditor: View {
     }
 
     private func fields(inRow row: Int) -> [(id: String, label: String)] {
-        ClaudeCodeHUDConnector.availableFields.filter {
-            connector.hudFields.contains($0.id) &&
-            (connector.hudFieldRows[$0.id] ?? ClaudeCodeHUDConnector.defaultFieldRows[$0.id] ?? 0) == row
+        let defaultIdx: (String) -> Int = { id in
+            ClaudeCodeHUDConnector.availableFields.firstIndex(where: { $0.id == id }) ?? 999
         }
+        return ClaudeCodeHUDConnector.availableFields
+            .filter {
+                connector.hudFields.contains($0.id) &&
+                (connector.hudFieldRows[$0.id] ?? ClaudeCodeHUDConnector.defaultFieldRows[$0.id] ?? 0) == row
+            }
+            .sorted { a, b in
+                let oa = connector.hudFieldOrder[a.id] ?? defaultIdx(a.id)
+                let ob = connector.hudFieldOrder[b.id] ?? defaultIdx(b.id)
+                return oa < ob
+            }
     }
 
     private var inactiveFields: [(id: String, label: String)] {
@@ -599,8 +608,11 @@ private struct HudRowZone: View {
                 } else {
                     HStack(spacing: 4) {
                         ForEach(fields, id: \.id) { f in
-                            HudFieldChip(fieldId: f.id, label: f.label, connector: connector)
+                            HudReorderableChip(field: f, connector: connector)
                         }
+                        // 마지막 칩 뒤에 드롭 → 행 맨 끝에 추가
+                        HudAppendZone(rowIndex: rowIndex, connector: connector)
+                        Spacer(minLength: 0)
                     }
                     .padding(.horizontal, 7)
                     .padding(.vertical, 6)
@@ -613,12 +625,10 @@ private struct HudRowZone: View {
                     guard let str = obj as? String, !str.isEmpty else { return }
                     DispatchQueue.main.async {
                         if str.hasPrefix("row:"), let srcRow = Int(str.dropFirst(4)) {
-                            // 행 순서 교환 (새 행 존으로는 무시)
                             if !isNewRow { connector.swapRows(srcRow, rowIndex) }
                         } else {
-                            // 항목 이동
-                            connector.hudFields.insert(str)
-                            connector.hudFieldRows[str] = rowIndex
+                            // 행 배경에 드롭 → 맨 끝에 추가
+                            connector.appendFieldToRow(str, row: rowIndex)
                         }
                     }
                 }
@@ -641,35 +651,33 @@ private struct HudInactiveZone: View {
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)
 
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 7)
-                    .fill(isTargeted
-                          ? Color.secondary.opacity(0.12)
-                          : Color.secondary.opacity(0.05))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 7)
-                            .strokeBorder(Color.secondary.opacity(0.18), lineWidth: 1)
-                    )
-
+            // ZStack 대신 .background 사용 — 크기를 content(칩)가 결정, background가 맞춤
+            Group {
                 if fields.isEmpty {
                     Text("모든 항목이 활성화됨")
                         .font(.system(size: 10))
                         .foregroundStyle(Color.secondary.opacity(0.45))
+                        .frame(maxWidth: .infinity, minHeight: 38, alignment: .leading)
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 9)
                 } else {
                     HudChipFlow(fields: fields, connector: connector)
                         .padding(6)
+                        .frame(maxWidth: .infinity, minHeight: 38, alignment: .topLeading)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 38)
+            .background(
+                RoundedRectangle(cornerRadius: 7)
+                    .fill(isTargeted
+                          ? Color.secondary.opacity(0.12)
+                          : Color.secondary.opacity(0.05))
+                    .overlay(RoundedRectangle(cornerRadius: 7)
+                        .strokeBorder(Color.secondary.opacity(0.18), lineWidth: 1))
+            )
             .onDrop(of: ["public.plain-text"], isTargeted: $isTargeted) { providers in
                 guard let provider = providers.first else { return false }
                 _ = provider.loadObject(ofClass: NSString.self) { obj, _ in
                     guard let str = obj as? String, !str.hasPrefix("row:") else { return }
-                    DispatchQueue.main.async {
-                        connector.hudFields.remove(str)
-                    }
+                    DispatchQueue.main.async { connector.hudFields.remove(str) }
                 }
                 return true
             }
@@ -677,19 +685,41 @@ private struct HudInactiveZone: View {
     }
 }
 
-// MARK: - 칩 플로우 (줄바꿈 지원)
+// MARK: - 칩 플로우 — 커스텀 FlowLayout 으로 자연스러운 줄바꿈
+
+private struct ChipFlowLayout: Layout {
+    var spacing: CGFloat = 4
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? 320
+        var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0
+        for sv in subviews {
+            let s = sv.sizeThatFits(.unspecified)
+            if x + s.width > width, x > 0 { x = 0; y += rowH + spacing; rowH = 0 }
+            x += s.width + spacing
+            rowH = max(rowH, s.height)
+        }
+        return CGSize(width: width, height: y + rowH)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, rowH: CGFloat = 0
+        for sv in subviews {
+            let s = sv.sizeThatFits(.unspecified)
+            if x + s.width > bounds.maxX, x > bounds.minX { x = bounds.minX; y += rowH + spacing; rowH = 0 }
+            sv.place(at: CGPoint(x: x, y: y), proposal: .unspecified)
+            x += s.width + spacing
+            rowH = max(rowH, s.height)
+        }
+    }
+}
 
 private struct HudChipFlow: View {
     let fields: [(id: String, label: String)]
     @ObservedObject var connector: ClaudeCodeHUDConnector
 
     var body: some View {
-        // LazyVGrid로 자동 줄바꿈 처리
-        LazyVGrid(
-            columns: [GridItem(.adaptive(minimum: 72, maximum: 140), spacing: 4)],
-            alignment: .leading,
-            spacing: 4
-        ) {
+        ChipFlowLayout(spacing: 4) {
             ForEach(fields, id: \.id) { f in
                 HudFieldChip(fieldId: f.id, label: f.label, connector: connector)
             }
@@ -697,20 +727,101 @@ private struct HudChipFlow: View {
     }
 }
 
+// MARK: - 행 끝 드롭존 (마지막 칩 뒤에 배치)
+
+private struct HudAppendZone: View {
+    let rowIndex: Int
+    @ObservedObject var connector: ClaudeCodeHUDConnector
+    @State private var isDropTarget = false
+
+    var body: some View {
+        ZStack {
+            Color.clear.frame(width: 28, height: 26)   // 히트 영역
+            Capsule()
+                .fill(Color.accentColor)
+                .frame(width: 2, height: 18)
+                .opacity(isDropTarget ? 1 : 0)
+                .animation(.easeInOut(duration: 0.1), value: isDropTarget)
+        }
+        .onDrop(of: ["public.plain-text"], isTargeted: $isDropTarget) { providers in
+            guard let provider = providers.first else { return false }
+            _ = provider.loadObject(ofClass: NSString.self) { obj, _ in
+                guard let str = obj as? String, !str.hasPrefix("row:") else { return }
+                DispatchQueue.main.async {
+                    connector.appendFieldToRow(str, row: rowIndex)
+                }
+            }
+            return true
+        }
+    }
+}
+
+// MARK: - 행 내 순서 변경 드롭 래퍼
+
+private struct HudReorderableChip: View {
+    let field: (id: String, label: String)
+    @ObservedObject var connector: ClaudeCodeHUDConnector
+    @State private var isDropTarget = false
+
+    var body: some View {
+        HudFieldChip(fieldId: field.id, label: field.label, connector: connector)
+            // 삽입 커서: 칩 앞쪽(leading)에 수직선으로 표시 — "이 칩 앞에 삽입"
+            .overlay(alignment: .leading) {
+                Capsule()
+                    .fill(Color.accentColor)
+                    .frame(width: 2, height: 18)
+                    .offset(x: -5)   // 칩 사이 공간에 위치
+                    .opacity(isDropTarget ? 1 : 0)
+                    .animation(.easeInOut(duration: 0.1), value: isDropTarget)
+            }
+            .onDrop(of: ["public.plain-text"], isTargeted: $isDropTarget) { providers in
+                guard let provider = providers.first else { return false }
+                _ = provider.loadObject(ofClass: NSString.self) { obj, _ in
+                    guard let str = obj as? String,
+                          !str.hasPrefix("row:"),
+                          str != field.id else { return }
+                    DispatchQueue.main.async {
+                        connector.reorderField(str, insertBefore: field.id)
+                    }
+                }
+                return true
+            }
+    }
+}
+
+// MARK: - NSMenu 트램폴린 (SwiftUI struct 에서 #selector 사용 불가 우회)
+
+private final class ChipMenuAction: NSObject {
+    private let body: () -> Void
+    init(_ body: @escaping () -> Void) { self.body = body }
+    @objc func run() { body() }
+}
+
 // MARK: - 드래그 가능한 항목 칩
 
 private struct HudFieldChip: View {
     let fieldId: String
     let label: String
-    @ObservedObject var connector: ClaudeCodeHUDConnector
+    @ObservedObject var connector: ClaudeCodeHUDConnector  // hudFields 변화(드래그) 감지용
+    @State private var selectedColor: String
 
-    private var currentColor: String {
-        connector.hudFieldColors[fieldId] ?? "auto"
+    // NSMenu 표시 중 action 객체를 유지하기 위한 보관소 (메뉴 닫힐 때까지 ARC 해제 방지)
+    @State private var menuActions: [ChipMenuAction] = []
+
+    init(fieldId: String, label: String, connector: ClaudeCodeHUDConnector) {
+        self.fieldId = fieldId
+        self.label = label
+        self.connector = connector
+        self._selectedColor = State(initialValue: connector.hudFieldColors[fieldId] ?? "auto")
     }
 
+    private var currentColor: String { selectedColor }
+
     var body: some View {
-        ZStack {
-            // ① 시각 레이어 — 색상·텍스트·화살표를 직접 렌더
+        // Button.plain → 레이블 전체가 히트 영역
+        // Button action 에서 NSMenu 를 직접 띄워 SwiftUI popover 를 완전히 우회
+        // → Form 스크롤 초기화 버그 없음
+        Button { presentNSColorMenu() } label: {
             HStack(spacing: 5) {
                 Circle()
                     .fill(swatchColor(currentColor))
@@ -725,37 +836,54 @@ private struct HudFieldChip: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-
-            // ② 인터랙션 레이어 — 투명 Menu가 칩 전체를 덮음
-            Menu {
-                ForEach(ClaudeCodeHUDConnector.colorOptions, id: \.id) { c in
-                    Button {
-                        if c.id == "auto" {
-                            connector.hudFieldColors[fieldId] = nil
-                        } else {
-                            connector.hudFieldColors[fieldId] = c.id
-                        }
-                    } label: {
-                        Label(c.label,
-                              systemImage: currentColor == c.id ? "checkmark" : "circle.fill")
-                    }
-                }
-            } label: {
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
+            .contentShape(Rectangle())
         }
-        .fixedSize()
+        .buttonStyle(.plain)
         .background(RoundedRectangle(cornerRadius: 5).fill(chipBgColor))
-        .overlay(
-            RoundedRectangle(cornerRadius: 5).strokeBorder(chipBorderColor, lineWidth: 1)
-        )
+        .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(chipBorderColor, lineWidth: 1))
+        .fixedSize()
         .onDrag {
             NSItemProvider(object: fieldId as NSString)
         }
+    }
+
+    // NSMenu 를 현재 마우스 위치에 표시 — AppKit 레벨이므로 SwiftUI Form 스크롤과 무관
+    private func presentNSColorMenu() {
+        let entries: [(String, String)] = [
+            ("auto","자동"),("blue","파랑"),("purple","보라"),("green","초록"),
+            ("yellow","노랑"),("cyan","청록"),("orange","주황"),("red","빨강"),("gray","회색")
+        ]
+        let menu = NSMenu()
+        var actions: [ChipMenuAction] = []
+
+        for (cid, clabel) in entries {
+            let action = ChipMenuAction { [cid] in
+                selectedColor = cid
+                if cid == "auto" {
+                    connector.hudFieldColors.removeValue(forKey: fieldId)
+                } else {
+                    connector.hudFieldColors[fieldId] = cid
+                }
+            }
+            actions.append(action)
+            let item = NSMenuItem(title: clabel, action: #selector(ChipMenuAction.run), keyEquivalent: "")
+            item.target = action
+            item.state = currentColor == cid ? .on : .off
+            menu.addItem(item)
+        }
+
+        // 메뉴가 열려 있는 동안 action 객체 유지
+        menuActions = actions
+
+        if let event = NSApp.currentEvent, let view = NSApp.keyWindow?.contentView {
+            NSMenu.popUpContextMenu(menu, with: event, for: view)
+        } else {
+            // currentEvent 가 없을 때 fallback — 현재 마우스 스크린 좌표 사용
+            menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
+        }
+
+        // 메뉴 닫힌 후 해제
+        menuActions = []
     }
 
     private var chipBgColor: Color {

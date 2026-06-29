@@ -53,8 +53,25 @@ final class ClaudeCodeHUDConnector: ObservableObject {
             try? writeOptsFile()
         }
     }
-    /// 항목별 색상 이름. 미설정(nil)이면 기본 색상 사용.
-    @Published var hudFieldColors: [String: String] = {
+    /// 항목별 행 내 순서. 값이 작을수록 앞쪽. 미설정 항목은 availableFields 정의 순서로 폴백.
+    @Published var hudFieldOrder: [String: Int] = {
+        guard let data = UserDefaults.standard.data(forKey: "hudFieldOrder"),
+              let decoded = try? JSONDecoder().decode([String: Int].self, from: data) else {
+            return [:]
+        }
+        return decoded
+    }() {
+        didSet {
+            if let data = try? JSONEncoder().encode(hudFieldOrder) {
+                UserDefaults.standard.set(data, forKey: "hudFieldOrder")
+            }
+            try? writeOptsFile()
+        }
+    }
+
+    /// 항목별 색상 이름. @Published 제거 — 칩이 로컬 @State 로 색상 표시하므로
+    /// 이 값이 변해도 Form 전체가 리렌더되지 않아 스크롤 초기화를 방지한다.
+    var hudFieldColors: [String: String] = {
         guard let data = UserDefaults.standard.data(forKey: "hudFieldColors"),
               let decoded = try? JSONDecoder().decode([String: String].self, from: data) else {
             return [:]
@@ -75,14 +92,16 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         ("ver", "CC 버전"), ("model", "모델"), ("action", "상태"), ("sid", "세션"),
         ("dir", "폴더(짧게)"), ("path", "경로(전체)"),
         ("ctx", "컨텍스트"), ("5h", "5시간"), ("wk", "주간"),
-        ("git", "git"), ("tool", "도구"), ("agent", "에이전트"), ("cost", "비용")
+        ("git", "git"), ("tool", "도구"), ("agent", "에이전트"), ("cost", "비용"),
+        ("effort", "사고량")
     ]
 
     /// 항목별 기본 행 번호 (멀티라인 모드)
     static let defaultFieldRows: [String: Int] = [
         "ver": 0, "model": 0, "action": 0, "sid": 0, "dir": 0, "path": 0,
         "ctx": 1, "5h": 1, "wk": 1,
-        "git": 2, "tool": 2, "agent": 2, "cost": 2
+        "git": 2, "tool": 2, "agent": 2, "cost": 2,
+        "effort": 0
     ]
 
     /// 항목 색상 선택지: (식별자, 한글 라벨)
@@ -312,6 +331,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         const fields = Array.isArray(opt.fields) ? opt.fields : null;
         const fieldRows = (opt.fieldRows && typeof opt.fieldRows === 'object') ? opt.fieldRows : {};
         const fieldColors = (opt.fieldColors && typeof opt.fieldColors === 'object') ? opt.fieldColors : {};
+        const fieldOrder  = (opt.fieldOrder  && typeof opt.fieldOrder  === 'object') ? opt.fieldOrder  : {};
 
         // 색상 이름 → [bg, fg, tint] (ANSI 256)
         const COLOR_PRESETS = {
@@ -333,8 +353,25 @@ final class ClaudeCodeHUDConnector: ObservableObject {
           'git':2,'tool':2,'agent':2,'cost':2
         };
 
-        // 사용률 레벨 → [채움 배경, 채움 전경, tint(밝은 전경)]
-        const lvl = (p) => (p >= 80 ? [52, 210, 203] : p >= 50 ? [58, 229, 178] : [22, 120, 35]);
+        // 사용률 → 5단계 색상 [bg, fg, tint] (auto 색상 전용)
+        // ctx: 100% 에 가까울수록 위험, 5h/wk: 사용량이 많을수록(남은시간 적을수록) 위험
+        const autoLvl = (p) => {
+          if (p >= 90) return [88,  196, 160];   // 🔴 위험 (critical)
+          if (p >= 75) return [130, 214, 208];   // 🟠 경고 (warning)
+          if (p >= 50) return [58,  229, 178];   // 🟡 주의 (caution)
+          if (p >= 25) return [28,  120,  46];   // 🟢 양호 (ok)
+          return        [22,  120,  35];         // 🟢 좋음 (good)
+        };
+
+        // 모델명 → 자동 색상 [bg, fg, tint]
+        const modelAutoColor = (name) => {
+          const n = (name || '').toLowerCase();
+          if (n.includes('opus'))   return [130, 214, 208]; // 🟠 orange (premium)
+          if (n.includes('sonnet')) return [24,  159,  39]; // 🔵 blue
+          if (n.includes('haiku'))  return [22,  120,  35]; // 🟢 green (fast)
+          if (n.includes('fable'))  return [90,  219, 198]; // 🟣 magenta
+          return [60, 200, 180]; // default purple-blue
+        };
 
         // transcript 꼬리에서 action / tool / agent 추출
         let action = '', tool = '', agent = '';
@@ -384,7 +421,11 @@ final class ClaudeCodeHUDConnector: ObservableObject {
 
         add('ver', '🔹', 'CC ' + (d.version || ''), 24, 159, 39);
         const model = (d.model && (d.model.display_name || d.model.id)) || '';
-        if (model) add('model', '🧠', model, 54, 225, 141);
+        if (model) {
+          // auto: 모델명에 따라 색상 자동 지정 (opus=주황, sonnet=파랑, haiku=초록, fable=자홍)
+          const mC = modelAutoColor(model);
+          add('model', '🧠', model, mC[0], mC[1], mC[2]);
+        }
         if (action) add('action', '▶️', action, 240, 255, 245);
         const sid = (d.session_id || '').slice(0, 6);
         if (sid) add('sid', '🔖', '#' + sid, 236, 247, 244);
@@ -396,12 +437,14 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         }
         const cw = d.context_window;
         if (cw && typeof cw.used_percentage === 'number') {
-          const L = lvl(cw.used_percentage);
+          // auto: 100%에 가까울수록 위험 색상 (green→yellow→orange→red)
+          const L = autoLvl(cw.used_percentage);
           add('ctx', '📊', 'ctx ' + Math.round(cw.used_percentage) + '%', L[0], L[1], L[2]);
         }
         const rate = (key, e, label, o) => {
           if (!o || typeof o.used_percentage !== 'number') return;
-          const L = lvl(o.used_percentage);
+          // auto: 사용량이 높을수록(남은시간 적을수록) 위험 색상
+          const L = autoLvl(o.used_percentage);
           add(key, e, label + ' ' + Math.round(o.used_percentage) + '%' + fmtReset(o.resets_at), L[0], L[1], L[2]);
         };
         const rl = d.rate_limits || {};
@@ -417,7 +460,25 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         if (agent) add('agent', '🤖', '@' + agent, 130, 230, 215);
         if (d.cost && typeof d.cost.total_cost_usd === 'number') add('cost', '💰', '$' + d.cost.total_cost_usd.toFixed(2), 238, 191, 108);
 
-        const ALL = ['ver', 'model', 'action', 'sid', 'dir', 'path', 'ctx', '5h', 'wk', 'git', 'tool', 'agent', 'cost'];
+        // effort: 사고량 수준 + thinking/fast 상태
+        const effortLevel = (d.effort && d.effort.level) || '';
+        const thinkingOn  = d.thinking && d.thinking.enabled;
+        const fastMode    = !!d.fast_mode;
+        const effortColor = (lvl) => {
+          if (lvl === 'max')    return [88,  196, 160];  // 🔴 최고
+          if (lvl === 'xhigh') return [130, 214, 208];   // 🟠 매우높음
+          if (lvl === 'high')  return [58,  229, 178];   // 🟡 높음
+          if (lvl === 'medium')return [24,  159,  39];   // 🔵 보통
+          return                      [240, 255, 245];   // ⬜ 낮음/기본
+        };
+        if (effortLevel || fastMode) {
+          const tag  = fastMode ? 'fast' : effortLevel;
+          const icon = thinkingOn ? '🤔' : '⚡';
+          const c    = fastMode ? [23, 159, 43] : effortColor(effortLevel);
+          add('effort', icon, tag, c[0], c[1], c[2]);
+        }
+
+        const ALL = ['ver', 'model', 'action', 'sid', 'dir', 'path', 'ctx', '5h', 'wk', 'git', 'tool', 'agent', 'cost', 'effort'];
         const selKeys = ALL.filter((k) => parts[k] && (!fields || fields.indexOf(k) >= 0));
 
         const fgc = (c, t) => E + '[38;5;' + c + 'm' + t + R;
@@ -442,12 +503,20 @@ final class ClaudeCodeHUDConnector: ObservableObject {
 
         let out;
         if (multiline) {
-          // 항목별 행 번호로 그루핑
+          // 항목별 행 번호로 그루핑 후 fieldOrder 기준 정렬
           const rowMap = {};
           for (const k of selKeys) {
             const row = (k in fieldRows) ? fieldRows[k] : (DEFAULT_ROWS[k] !== undefined ? DEFAULT_ROWS[k] : 0);
             if (!rowMap[row]) rowMap[row] = [];
             rowMap[row].push(k);
+          }
+          const allKeys = ALL;
+          for (const r of Object.keys(rowMap)) {
+            rowMap[r].sort((a, b) => {
+              const oa = fieldOrder[a] !== undefined ? fieldOrder[a] : allKeys.indexOf(a);
+              const ob = fieldOrder[b] !== undefined ? fieldOrder[b] : allKeys.indexOf(b);
+              return oa - ob;
+            });
           }
           const sortedRows = Object.keys(rowMap).map(Number).sort((a, b) => a - b);
           out = sortedRows.map((r) => rowMap[r].map(seg).join(sep)).join(NL);
@@ -471,6 +540,65 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         hudFieldRows = updated
     }
 
+    /// fieldId 를 특정 행의 맨 끝에 추가 (행 배경 드롭 또는 끝 드롭존).
+    func appendFieldToRow(_ fieldId: String, row: Int) {
+        let defaultIdx: (String) -> Int = { id in
+            ClaudeCodeHUDConnector.availableFields.firstIndex(where: { $0.id == id }) ?? 999
+        }
+        let maxOrder = ClaudeCodeHUDConnector.availableFields
+            .filter { f in
+                hudFields.contains(f.id) && f.id != fieldId
+                && (hudFieldRows[f.id] ?? ClaudeCodeHUDConnector.defaultFieldRows[f.id] ?? 0) == row
+            }
+            .map { hudFieldOrder[$0.id] ?? defaultIdx($0.id) }
+            .max() ?? -1
+
+        hudFields.insert(fieldId)
+        var newRows = hudFieldRows
+        newRows[fieldId] = row
+        var newOrder = hudFieldOrder
+        newOrder[fieldId] = maxOrder + 1
+        hudFieldRows = newRows
+        hudFieldOrder = newOrder
+    }
+
+    /// 특정 fieldId 를 targetId 앞에 삽입 (같은 행이면 순서 변경, 다른 행이면 이동 후 삽입).
+    func reorderField(_ fieldId: String, insertBefore targetId: String) {
+        let targetRow = hudFieldRows[targetId]
+            ?? ClaudeCodeHUDConnector.defaultFieldRows[targetId]
+            ?? 0
+
+        // targetId 가 속한 행의 현재 순서 (dragged 항목 제외)
+        let defaultIdx: (String) -> Int = { id in
+            ClaudeCodeHUDConnector.availableFields.firstIndex(where: { $0.id == id }) ?? 999
+        }
+        var rowFields = ClaudeCodeHUDConnector.availableFields
+            .filter { f in
+                hudFields.contains(f.id)
+                && f.id != fieldId
+                && (hudFieldRows[f.id] ?? ClaudeCodeHUDConnector.defaultFieldRows[f.id] ?? 0) == targetRow
+            }
+            .sorted { a, b in
+                let oa = hudFieldOrder[a.id] ?? defaultIdx(a.id)
+                let ob = hudFieldOrder[b.id] ?? defaultIdx(b.id)
+                return oa < ob
+            }
+            .map { $0.id }
+
+        if let idx = rowFields.firstIndex(of: targetId) {
+            rowFields.insert(fieldId, at: idx)
+        } else {
+            rowFields.append(fieldId)
+        }
+
+        // 행 이동 + 순서 일괄 적용
+        hudFields.insert(fieldId)
+        hudFieldRows[fieldId] = targetRow
+        var newOrder = hudFieldOrder
+        for (i, fid) in rowFields.enumerated() { newOrder[fid] = i }
+        hudFieldOrder = newOrder
+    }
+
     /// 표시 옵션을 hud-opts.json 에 기록한다. 렌더러가 매 렌더마다 읽는다.
     private func writeOptsFile() throws {
         try FileManager.default.createDirectory(at: monitorDir, withIntermediateDirectories: true)
@@ -482,7 +610,8 @@ final class ClaudeCodeHUDConnector: ObservableObject {
             "multiline": true,
             "fields": orderedFields,
             "fieldRows": hudFieldRows,
-            "fieldColors": hudFieldColors
+            "fieldColors": hudFieldColors,
+            "fieldOrder": hudFieldOrder
         ]
         let data = try JSONSerialization.data(withJSONObject: opts, options: [.prettyPrinted, .sortedKeys])
         try data.write(to: hudOptsPath, options: .atomic)
