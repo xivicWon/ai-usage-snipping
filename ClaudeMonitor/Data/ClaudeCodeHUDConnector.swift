@@ -42,10 +42,10 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         didSet { UserDefaults.standard.set(Array(hudFields), forKey: "hudFields"); try? writeOptsFile() }
     }
 
-    static let defaultFields = ["ver", "model", "action", "sid", "ctx", "5h", "wk", "git", "tool", "agent", "cost"]
+    static let defaultFields = ["ver", "model", "action", "sid", "dir", "ctx", "5h", "wk", "git", "tool", "agent", "cost"]
     /// 체크박스로 선택 가능한 표시 항목: (식별자, 한글 라벨) — 표시 순서
     static let availableFields: [(id: String, label: String)] = [
-        ("ver", "CC 버전"), ("model", "모델"), ("action", "상태"), ("sid", "세션"),
+        ("ver", "CC 버전"), ("model", "모델"), ("action", "상태"), ("sid", "세션"), ("dir", "폴더"),
         ("ctx", "컨텍스트"), ("5h", "5시간"), ("wk", "주간"),
         ("git", "git"), ("tool", "도구"), ("agent", "에이전트"), ("cost", "비용")
     ]
@@ -326,6 +326,11 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         if (action) add('action', '▶️', action, 240, 255, 245);
         const sid = (d.session_id || '').slice(0, 6);
         if (sid) add('sid', '🔖', '#' + sid, 236, 247, 244);
+        const cwdPath = (d.workspace && d.workspace.current_dir) || d.cwd || '';
+        if (cwdPath) {
+          const segs = cwdPath.split('/').filter(Boolean);
+          add('dir', '📁', segs.slice(-2).join('/'), 60, 200, 180);
+        }
         const cw = d.context_window;
         if (cw && typeof cw.used_percentage === 'number') {
           const L = lvl(cw.used_percentage);
@@ -349,12 +354,12 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         if (agent) add('agent', '🤖', '@' + agent, 130, 230, 215);
         if (d.cost && typeof d.cost.total_cost_usd === 'number') add('cost', '💰', '$' + d.cost.total_cost_usd.toFixed(2), 238, 191, 108);
 
-        const ALL = ['ver', 'model', 'action', 'sid', 'ctx', '5h', 'wk', 'git', 'tool', 'agent', 'cost'];
+        const ALL = ['ver', 'model', 'action', 'sid', 'dir', 'ctx', '5h', 'wk', 'git', 'tool', 'agent', 'cost'];
         const selKeys = ALL.filter((k) => parts[k] && (!fields || fields.indexOf(k) >= 0));
 
         // 범주별 행 그룹 (행분리용): 세션 · 사용량 · 작업
         const ROWS = [
-          ['ver', 'model', 'action', 'sid'],
+          ['ver', 'model', 'action', 'sid', 'dir'],
           ['ctx', '5h', 'wk'],
           ['git', 'tool', 'agent', 'cost']
         ];

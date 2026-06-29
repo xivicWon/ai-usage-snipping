@@ -142,11 +142,13 @@ final class AppState: ObservableObject {
         guard recent.count >= 2, let earliest = recent.min(by: { $0.date < $1.date }) else { return }
 
         let delta = max(0, windowTokens - earliest.tokens)
+        // 단계 임계값은 설정(UsageLimits)에서 사용자가 조정 가능. 기본값은 실제 처리율 분포 기반.
+        let limits = UsageLimits.shared
         switch delta {
-        case ..<500:   tokenRateLevel = 0
-        case 500..<3000: tokenRateLevel = 1
-        case 3000..<10000: tokenRateLevel = 2
-        default:       tokenRateLevel = 3
+        case ..<limits.rateLevel1Min: tokenRateLevel = 0
+        case ..<limits.rateLevel2Min: tokenRateLevel = 1
+        case ..<limits.rateLevel3Min: tokenRateLevel = 2
+        default:                      tokenRateLevel = 3
         }
     }
 

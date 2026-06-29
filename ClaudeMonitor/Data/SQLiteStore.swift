@@ -222,4 +222,38 @@ final class SQLiteStore {
             return rows.first.map { Int($0["total"] as Int64) } ?? 0
         }
     }
+
+    /// 활동이 있었던 분(分)별 input+output 토큰 합계 — 오름차순 정렬. 처리율 분포 분석용.
+    func perMinuteTokenRates(days: Int) throws -> [Int] {
+        try dbQueue.read { db in
+            try Row.fetchAll(db, sql: """
+                SELECT SUM(inputTokens + outputTokens) AS toks
+                FROM sessionRecord
+                WHERE timestamp >= datetime('now', ?)
+                GROUP BY strftime('%Y-%m-%d %H:%M', timestamp)
+                HAVING toks > 0
+                ORDER BY toks
+                """, arguments: ["-\(days) days"])
+                .map { Int($0["toks"] as Int64) }
+        }
+    }
+
+    /// 최근 N일 사용량 분포에서 처리율 게이지 임계값(1·2·3단계)을 자동 산출한다.
+    /// 1단계≈p20, 2단계≈중앙값, 3단계≈p90. 500 단위로 반올림하며 단조 증가를 보장한다.
+    /// 데이터가 부족하면(활동 분 < 20) nil.
+    func suggestedRateThresholds(days: Int = 30) throws -> (level1: Int, level2: Int, level3: Int)? {
+        let rates = try perMinuteTokenRates(days: days)   // 이미 오름차순
+        guard rates.count >= 20 else { return nil }
+
+        func pct(_ p: Double) -> Int {
+            let idx = min(rates.count - 1, max(0, Int((Double(rates.count) - 1) * p)))
+            return rates[idx]
+        }
+        func round500(_ v: Int) -> Int { (v + 250) / 500 * 500 }
+
+        let l1 = max(500,    round500(pct(0.20)))
+        let l2 = max(l1 + 500, round500(pct(0.50)))
+        let l3 = max(l2 + 500, round500(pct(0.90)))
+        return (l1, l2, l3)
+    }
 }
