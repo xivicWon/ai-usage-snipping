@@ -86,10 +86,13 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         }
     }
 
-    static let defaultFields = ["ver", "model", "action", "sid", "dir", "ctx", "5h", "wk", "git", "tool", "agent", "cost"]
+    /// ClaudeMonitor 앱 자신의 버전 (HUD 의 'appver' 필드에 주입). CC 버전(Claude Code)과 별개.
+    static let appVersion: String = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
+
+    static let defaultFields = ["ver", "appver", "model", "action", "sid", "dir", "ctx", "5h", "wk", "git", "tool", "agent", "cost"]
     /// 체크박스로 선택 가능한 표시 항목: (식별자, 한글 라벨) — 표시 순서
     static let availableFields: [(id: String, label: String)] = [
-        ("ver", "CC 버전"), ("model", "모델"), ("action", "상태"), ("sid", "세션"),
+        ("ver", "CC 버전"), ("appver", "앱 버전"), ("model", "모델"), ("action", "상태"), ("sid", "세션"),
         ("dir", "폴더(짧게)"), ("path", "경로(전체)"),
         ("ctx", "컨텍스트"), ("5h", "5시간"), ("wk", "주간"),
         ("git", "git"), ("tool", "도구"), ("agent", "에이전트"), ("cost", "비용"),
@@ -98,7 +101,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
 
     /// 항목별 기본 행 번호 (멀티라인 모드)
     static let defaultFieldRows: [String: Int] = [
-        "ver": 0, "model": 0, "action": 0, "sid": 0, "dir": 0, "path": 0,
+        "ver": 0, "appver": 0, "model": 0, "action": 0, "sid": 0, "dir": 0, "path": 0,
         "ctx": 1, "5h": 1, "wk": 1,
         "git": 2, "tool": 2, "agent": 2, "cost": 2,
         "effort": 0
@@ -332,6 +335,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         const fieldRows = (opt.fieldRows && typeof opt.fieldRows === 'object') ? opt.fieldRows : {};
         const fieldColors = (opt.fieldColors && typeof opt.fieldColors === 'object') ? opt.fieldColors : {};
         const fieldOrder  = (opt.fieldOrder  && typeof opt.fieldOrder  === 'object') ? opt.fieldOrder  : {};
+        const appVersion = (typeof opt.appVersion === 'string') ? opt.appVersion : '';
 
         // 색상 이름 → [bg, fg, tint] (ANSI 256)
         const COLOR_PRESETS = {
@@ -420,6 +424,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         const add = (key, e, text, bg, fg, tint) => { parts[key] = { emoji: e, text, bg, fg, tint }; };
 
         add('ver', '🔹', 'CC ' + (d.version || ''), 24, 159, 39);
+        if (appVersion) add('appver', '🏷', 'CM ' + appVersion, 60, 200, 180);
         const model = (d.model && (d.model.display_name || d.model.id)) || '';
         if (model) {
           // auto: 모델명에 따라 색상 자동 지정 (opus=주황, sonnet=파랑, haiku=초록, fable=자홍)
@@ -478,7 +483,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
           add('effort', icon, tag, c[0], c[1], c[2]);
         }
 
-        const ALL = ['ver', 'model', 'action', 'sid', 'dir', 'path', 'ctx', '5h', 'wk', 'git', 'tool', 'agent', 'cost', 'effort'];
+        const ALL = ['ver', 'appver', 'model', 'action', 'sid', 'dir', 'path', 'ctx', '5h', 'wk', 'git', 'tool', 'agent', 'cost', 'effort'];
         const selKeys = ALL.filter((k) => parts[k] && (!fields || fields.indexOf(k) >= 0));
 
         const fgc = (c, t) => E + '[38;5;' + c + 'm' + t + R;
@@ -611,7 +616,8 @@ final class ClaudeCodeHUDConnector: ObservableObject {
             "fields": orderedFields,
             "fieldRows": hudFieldRows,
             "fieldColors": hudFieldColors,
-            "fieldOrder": hudFieldOrder
+            "fieldOrder": hudFieldOrder,
+            "appVersion": ClaudeCodeHUDConnector.appVersion  // 렌더러가 모르는 앱 버전을 주입
         ]
         let data = try JSONSerialization.data(withJSONObject: opts, options: [.prettyPrinted, .sortedKeys])
         try data.write(to: hudOptsPath, options: .atomic)
