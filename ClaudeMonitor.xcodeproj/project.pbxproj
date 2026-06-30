@@ -21,7 +21,9 @@
 		4DFDE11293FBE677ACD2C926 /* BotSessionClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8BCCE92306B6FA03F6E4AB /* BotSessionClassifierTests.swift */; };
 		638D4DA0DB04EF50100273BE /* ClaudeCodeHUDConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB8FB400CDE3295D0382D0CF /* ClaudeCodeHUDConnector.swift */; };
 		63978344E36EBB5FFC03C146 /* RetrospectivePromptBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7585350EA6844232DA1BEA3 /* RetrospectivePromptBuilderTests.swift */; };
+		8F35C441DCCA14BD08758C9C /* RetrospectiveEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63D8F731B6DF73A544816B1B /* RetrospectiveEngine.swift */; };
 		92C8780A17067BCFE01176A1 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46DDDAE35FBBC7D8F01BA11 /* AppState.swift */; };
+		967F865814427F5FCE0C40D4 /* RetrospectiveEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8142C6242F5DD8F11B24413 /* RetrospectiveEngineTests.swift */; };
 		99A742107EC9BCFEE6DE3938 /* JSONLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13DDDF5B01814C7620139479 /* JSONLParser.swift */; };
 		A319210622A1BAD45DB17BAD /* RetrospectiveReportStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A8F771FF134F28C220C81E /* RetrospectiveReportStoreTests.swift */; };
 		A3670779B5D381B44B9E16BF /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB78E9A3A21D02510026017C /* MenuBarView.swift */; };
@@ -73,6 +75,7 @@
 		4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingTableTests.swift; sourceTree = "<group>"; };
 		4CCDCFC0B66516097C5FDAF8 /* ClaudeSessionFeatureParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSessionFeatureParserTests.swift; sourceTree = "<group>"; };
 		586053C67C6E14B7D97EF938 /* SessionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionReader.swift; sourceTree = "<group>"; };
+		63D8F731B6DF73A544816B1B /* RetrospectiveEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveEngine.swift; sourceTree = "<group>"; };
 		7BA6A025BAED91CB7D580F5A /* CodexSessionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexSessionReader.swift; sourceTree = "<group>"; };
 		87CD60EF87CF0D1AAD95CCF6 /* AnthropicUsageReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicUsageReader.swift; sourceTree = "<group>"; };
 		89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStore.swift; sourceTree = "<group>"; };
@@ -91,6 +94,7 @@
 		CC030377CF76169788DC1BEE /* RetrospectiveReportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveReportStore.swift; sourceTree = "<group>"; };
 		DB8BCCE92306B6FA03F6E4AB /* BotSessionClassifierTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotSessionClassifierTests.swift; sourceTree = "<group>"; };
 		E2E8C5D572320C1859698AE1 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		E8142C6242F5DD8F11B24413 /* RetrospectiveEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveEngineTests.swift; sourceTree = "<group>"; };
 		F2A8F771FF134F28C220C81E /* RetrospectiveReportStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveReportStoreTests.swift; sourceTree = "<group>"; };
 		F4F0139049AB7029E72F1BEB /* PricingTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingTable.swift; sourceTree = "<group>"; };
 		F9FAF0667A4500690AC14250 /* ClaudeMonitor.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClaudeMonitor.entitlements; sourceTree = "<group>"; };
@@ -149,6 +153,7 @@
 				31C17EE3254080CBA8B0DD22 /* JSONLParserTests.swift */,
 				4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */,
 				084CD0C199D5FAEF700CEE1B /* RetrospectiveAggregatorTests.swift */,
+				E8142C6242F5DD8F11B24413 /* RetrospectiveEngineTests.swift */,
 				B7585350EA6844232DA1BEA3 /* RetrospectivePromptBuilderTests.swift */,
 				F2A8F771FF134F28C220C81E /* RetrospectiveReportStoreTests.swift */,
 				2D35FF9BC7516C3572294BFC /* SessionFeatureStoreTests.swift */,
@@ -199,6 +204,7 @@
 				F4F0139049AB7029E72F1BEB /* PricingTable.swift */,
 				89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */,
 				0A8857B39997F082124EDCA0 /* RetrospectiveAggregator.swift */,
+				63D8F731B6DF73A544816B1B /* RetrospectiveEngine.swift */,
 				2FFD67AC2873B411076E081F /* RetrospectivePromptBuilder.swift */,
 				A4A17B20EE921EFBB588FBB1 /* RetrospectiveReport.swift */,
 				CC030377CF76169788DC1BEE /* RetrospectiveReportStore.swift */,
@@ -299,6 +305,7 @@
 				F050D6199EA08714A355A510 /* JSONLParserTests.swift in Sources */,
 				B032D0CE35CD41E134501DB1 /* PricingTableTests.swift in Sources */,
 				F5D62BD9EF78AAE398B3455A /* RetrospectiveAggregatorTests.swift in Sources */,
+				967F865814427F5FCE0C40D4 /* RetrospectiveEngineTests.swift in Sources */,
 				63978344E36EBB5FFC03C146 /* RetrospectivePromptBuilderTests.swift in Sources */,
 				A319210622A1BAD45DB17BAD /* RetrospectiveReportStoreTests.swift in Sources */,
 				BAD2E0F543A769F0F59DE8E6 /* SQLiteStoreTests.swift in Sources */,
@@ -325,6 +332,7 @@
 				D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */,
 				C0B70CF38A6A0AA853808F58 /* ProfileStore.swift in Sources */,
 				33144E350059B3E5334C8E29 /* RetrospectiveAggregator.swift in Sources */,
+				8F35C441DCCA14BD08758C9C /* RetrospectiveEngine.swift in Sources */,
 				FEEF00A601831B9BE64C9ADE /* RetrospectivePromptBuilder.swift in Sources */,
 				CF12AEC429CD86501C4FC299 /* RetrospectiveReport.swift in Sources */,
 				350CFF2DDF35A33EE9BACDB1 /* RetrospectiveReportStore.swift in Sources */,
