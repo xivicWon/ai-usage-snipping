@@ -40,6 +40,11 @@ final class SessionFeatureStore {
             try db.create(index: "sessionFeature_on_startedAt",
                           on: "sessionFeature", columns: ["startedAt"], ifNotExists: true)
         }
+        m.registerMigration("v2_isBot") { db in
+            try db.alter(table: "sessionFeature") { t in
+                t.add(column: "isBot", .boolean).notNull().defaults(to: false)
+            }
+        }
         try m.migrate(dbQueue)
     }
 
@@ -51,13 +56,13 @@ final class SessionFeatureStore {
                 try db.execute(sql: """
                     INSERT OR REPLACE INTO sessionFeature
                       (sessionId, source, projectPath, goalCount, toolCountsJSON, filesEditedJSON,
-                       testTouched, errorCount, interruptCount, totalTokens, startedAt, endedAt)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                       testTouched, errorCount, interruptCount, totalTokens, startedAt, endedAt, isBot)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
                     """, arguments: [
                         f.sessionId, f.source, f.projectPath, f.goalCount,
                         Self.encode(f.toolCounts), Self.encode(f.filesEdited),
                         f.testTouched, f.errorCount, f.interruptCount, f.totalTokens,
-                        f.startedAt, f.endedAt,
+                        f.startedAt, f.endedAt, f.isBot,
                     ])
             }
         }
@@ -102,7 +107,7 @@ final class SessionFeatureStore {
             filesEdited: decodeArr(row["filesEditedJSON"]),
             testTouched: row["testTouched"], errorCount: row["errorCount"],
             interruptCount: row["interruptCount"], totalTokens: row["totalTokens"],
-            startedAt: row["startedAt"], endedAt: row["endedAt"]
+            startedAt: row["startedAt"], endedAt: row["endedAt"], isBot: row["isBot"]
         )
     }
 }

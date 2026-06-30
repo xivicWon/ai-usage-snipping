@@ -29,6 +29,8 @@ final class ClaudeSessionFeatureParser {
         var testTouched = false
         var startedAt: Date?, endedAt: Date?
         var sawAnyLine = false
+        var firstPrompt: String?
+        var briefInjected = false
 
         for line in text.components(separatedBy: "\n") {
             guard let lineData = line.data(using: .utf8), !line.trimmingCharacters(in: .whitespaces).isEmpty,
@@ -62,6 +64,8 @@ final class ClaudeSessionFeatureParser {
                     // 메타/스킬 주입 — goal 아님
                 } else {
                     goalCount += 1
+                    if firstPrompt == nil { firstPrompt = joined }
+                    if joined.contains(".claude-brief") { briefInjected = true }
                 }
             } else if type == "assistant" {
                 if let usage = msg?["usage"] as? [String: Any] {
@@ -84,11 +88,13 @@ final class ClaudeSessionFeatureParser {
         }
 
         guard sawAnyLine else { return nil }
+        let isBot = BotSessionClassifier.isBot(
+            firstUserPrompt: firstPrompt ?? "", briefInjected: briefInjected, toolCounts: toolCounts)
         return SessionFeatures(
             sessionId: sessionId, source: "claude", projectPath: projectPath,
             goalCount: goalCount, toolCounts: toolCounts, filesEdited: filesEdited,
             testTouched: testTouched, errorCount: errorCount, interruptCount: interruptCount,
-            totalTokens: totalTokens, startedAt: startedAt, endedAt: endedAt
+            totalTokens: totalTokens, startedAt: startedAt, endedAt: endedAt, isBot: isBot
         )
     }
 

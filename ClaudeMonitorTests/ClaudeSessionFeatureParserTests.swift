@@ -117,6 +117,21 @@ final class ClaudeSessionFeatureParserTests: XCTestCase {
         XCTAssertEqual(f.interruptCount, 2)
     }
 
+    func test_normal_session_is_not_flagged_as_bot() throws {
+        let url = write([userText("기능 추가해줘"), assistant(tools: [("Edit", "/p/A.swift")])])
+        let f = try XCTUnwrap(sut.parse(url))
+        XCTAssertFalse(f.isBot)
+    }
+
+    func test_review_bot_session_is_flagged() throws {
+        let url = write([
+            userText("Review this change for security vulnerabilities."),
+            assistant(tools: [("Read", "")]),
+        ])
+        let f = try XCTUnwrap(sut.parse(url))
+        XCTAssertTrue(f.isBot)
+    }
+
     func test_sums_tokens_across_assistant_messages() throws {
         let url = write([
             userText("작업"),

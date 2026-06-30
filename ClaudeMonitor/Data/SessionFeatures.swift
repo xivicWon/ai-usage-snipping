@@ -17,4 +17,6 @@ struct SessionFeatures: Equatable {
     var totalTokens: Int
     var startedAt: Date?
     var endedAt: Date?
+    /// 자동화/봇 세션 여부 — 회고 집계에서 기본 제외. [[bot-session-classifier]]
+    var isBot: Bool
 }

@@ -11,13 +11,20 @@ final class SessionFeatureStoreTests: XCTestCase {
     }
 
     private func make(id: String, goals: Int = 1, started: Date? = nil,
-                      tools: [String: Int] = ["Edit": 2], files: [String] = ["/p/A.swift"]) -> SessionFeatures {
+                      tools: [String: Int] = ["Edit": 2], files: [String] = ["/p/A.swift"],
+                      isBot: Bool = false) -> SessionFeatures {
         SessionFeatures(
             sessionId: id, source: "claude", projectPath: "/p",
             goalCount: goals, toolCounts: tools, filesEdited: files,
             testTouched: false, errorCount: 0, interruptCount: 0, totalTokens: 100,
-            startedAt: started, endedAt: started
+            startedAt: started, endedAt: started, isBot: isBot
         )
+    }
+
+    func test_isBot_flag_roundtrips() throws {
+        try sut.upsert(make(id: "BOT", started: day, isBot: true))
+        let got = try sut.features(from: day.addingTimeInterval(-60), to: day.addingTimeInterval(60)).first
+        XCTAssertEqual(got?.isBot, true)
     }
 
     private let day = Date(timeIntervalSince1970: 1_750_000_000)  // fixed, whole-second
