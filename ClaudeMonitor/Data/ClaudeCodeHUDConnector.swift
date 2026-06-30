@@ -334,16 +334,17 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         const fieldOrder  = (opt.fieldOrder  && typeof opt.fieldOrder  === 'object') ? opt.fieldOrder  : {};
 
         // 색상 이름 → [bg, fg, tint] (ANSI 256)
+        // bg: 채움 모드 배경(어두운 톤), fg: 그 배경 위 글자색(대비), tint: 비채움 모드 글자색(선명한 톤)
         const COLOR_PRESETS = {
-          blue:    [24,  159,  39],
-          purple:  [54,  225, 141],
-          gray:    [240, 255, 245],
-          red:     [88,  203, 203],
-          green:   [22,  120,  35],
-          yellow:  [58,  229, 178],
-          cyan:    [23,  159,  43],
-          orange:  [130, 230, 215],
-          magenta: [90,  219, 198],
+          blue:    [25,  231,  39],
+          purple:  [55,  231, 141],
+          gray:    [240, 231, 245],
+          red:     [88,  231, 196],
+          green:   [22,  231,  46],
+          yellow:  [136, 16,  226],
+          cyan:    [30,  231,  51],
+          orange:  [130, 231, 208],
+          magenta: [90,  231, 201],
         };
 
         // 항목별 기본 행 번호
