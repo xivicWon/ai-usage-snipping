@@ -64,6 +64,12 @@ final class SQLiteStore {
         try migrate()
     }
 
+    /// 임의 경로(또는 `:memory:`)로 여는 이니셜라이저 — 테스트용.
+    init(path: String) throws {
+        dbQueue = try DatabaseQueue(path: path)
+        try migrate()
+    }
+
     static func dbPath(for profileId: UUID?) -> String {
         let dir = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

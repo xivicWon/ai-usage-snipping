@@ -23,9 +23,12 @@
 		B3360F2AA375D4BCDAD082D9 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E8C5D572320C1859698AE1 /* DashboardView.swift */; };
 		BAD2E0F543A769F0F59DE8E6 /* SQLiteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */; };
 		C0B70CF38A6A0AA853808F58 /* ProfileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */; };
+		CFEBB7FCDA3E4B2B5A6E83EC /* ClaudeSessionFeatureParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A91F0901084F93E511243C6 /* ClaudeSessionFeatureParser.swift */; };
 		D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4F0139049AB7029E72F1BEB /* PricingTable.swift */; };
 		D7FCD950BF90744E8DF2CB3E /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 4FCF28A9277A18AC8034DE93 /* GRDB */; };
+		EE444503D734F96F52156E01 /* ClaudeSessionFeatureParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CCDCFC0B66516097C5FDAF8 /* ClaudeSessionFeatureParserTests.swift */; };
 		F050D6199EA08714A355A510 /* JSONLParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C17EE3254080CBA8B0DD22 /* JSONLParserTests.swift */; };
+		F30ACF9B546AED5A12FCBC12 /* SessionFeatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12671792E480FCCA7307993 /* SessionFeatures.swift */; };
 		FA9CA14A57DDF17457003D17 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 7A47BBCBBEE31491AB524BAC /* GRDB */; };
 		FB5BA0915A76F6E2C556FAE8 /* CodexSessionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BA6A025BAED91CB7D580F5A /* CodexSessionReader.swift */; };
 /* End PBXBuildFile section */
@@ -47,13 +50,16 @@
 		13DDDF5B01814C7620139479 /* JSONLParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLParser.swift; sourceTree = "<group>"; };
 		20AD9838A3FA57813FE57DE7 /* ClaudeMonitorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeMonitorApp.swift; sourceTree = "<group>"; };
 		31C17EE3254080CBA8B0DD22 /* JSONLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLParserTests.swift; sourceTree = "<group>"; };
+		3A91F0901084F93E511243C6 /* ClaudeSessionFeatureParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSessionFeatureParser.swift; sourceTree = "<group>"; };
 		4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingTableTests.swift; sourceTree = "<group>"; };
+		4CCDCFC0B66516097C5FDAF8 /* ClaudeSessionFeatureParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSessionFeatureParserTests.swift; sourceTree = "<group>"; };
 		586053C67C6E14B7D97EF938 /* SessionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionReader.swift; sourceTree = "<group>"; };
 		7BA6A025BAED91CB7D580F5A /* CodexSessionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexSessionReader.swift; sourceTree = "<group>"; };
 		87CD60EF87CF0D1AAD95CCF6 /* AnthropicUsageReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicUsageReader.swift; sourceTree = "<group>"; };
 		89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStore.swift; sourceTree = "<group>"; };
 		93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStoreTests.swift; sourceTree = "<group>"; };
 		9924D1F6FBFD4F220629C2E2 /* ClaudeMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClaudeMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A12671792E480FCCA7307993 /* SessionFeatures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionFeatures.swift; sourceTree = "<group>"; };
 		A46DDDAE35FBBC7D8F01BA11 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A694C018F13572E6F47C48F2 /* ClaudeMonitorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeMonitorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AB8FB400CDE3295D0382D0CF /* ClaudeCodeHUDConnector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeHUDConnector.swift; sourceTree = "<group>"; };
@@ -111,6 +117,7 @@
 			isa = PBXGroup;
 			children = (
 				09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */,
+				4CCDCFC0B66516097C5FDAF8 /* ClaudeSessionFeatureParserTests.swift */,
 				31C17EE3254080CBA8B0DD22 /* JSONLParserTests.swift */,
 				4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */,
 				93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */,
@@ -151,11 +158,13 @@
 			children = (
 				87CD60EF87CF0D1AAD95CCF6 /* AnthropicUsageReader.swift */,
 				AB8FB400CDE3295D0382D0CF /* ClaudeCodeHUDConnector.swift */,
+				3A91F0901084F93E511243C6 /* ClaudeSessionFeatureParser.swift */,
 				7BA6A025BAED91CB7D580F5A /* CodexSessionReader.swift */,
 				064D459D72D381E7B595EB7F /* FSEventWatcher.swift */,
 				13DDDF5B01814C7620139479 /* JSONLParser.swift */,
 				F4F0139049AB7029E72F1BEB /* PricingTable.swift */,
 				89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */,
+				A12671792E480FCCA7307993 /* SessionFeatures.swift */,
 				586053C67C6E14B7D97EF938 /* SessionReader.swift */,
 				C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */,
 				FCFFE24F64246E1FC672EBD3 /* UsageLimits.swift */,
@@ -245,6 +254,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				4B5B9002E14D19F2EA776645 /* ClaudeMonitorTests.swift in Sources */,
+				EE444503D734F96F52156E01 /* ClaudeSessionFeatureParserTests.swift in Sources */,
 				F050D6199EA08714A355A510 /* JSONLParserTests.swift in Sources */,
 				B032D0CE35CD41E134501DB1 /* PricingTableTests.swift in Sources */,
 				BAD2E0F543A769F0F59DE8E6 /* SQLiteStoreTests.swift in Sources */,
@@ -259,6 +269,7 @@
 				92C8780A17067BCFE01176A1 /* AppState.swift in Sources */,
 				638D4DA0DB04EF50100273BE /* ClaudeCodeHUDConnector.swift in Sources */,
 				A4279A2AEA51CB504671DF7F /* ClaudeMonitorApp.swift in Sources */,
+				CFEBB7FCDA3E4B2B5A6E83EC /* ClaudeSessionFeatureParser.swift in Sources */,
 				FB5BA0915A76F6E2C556FAE8 /* CodexSessionReader.swift in Sources */,
 				B3360F2AA375D4BCDAD082D9 /* DashboardView.swift in Sources */,
 				33CCA2E30A0D83ABA8471E95 /* FSEventWatcher.swift in Sources */,
@@ -267,6 +278,7 @@
 				D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */,
 				C0B70CF38A6A0AA853808F58 /* ProfileStore.swift in Sources */,
 				471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */,
+				F30ACF9B546AED5A12FCBC12 /* SessionFeatures.swift in Sources */,
 				3F85887EF6A1ADC61E36A892 /* SessionReader.swift in Sources */,
 				3CA6C1568C9356545E9DB686 /* SettingsView.swift in Sources */,
 				35C2C2C2C97F97332DC9911E /* UsageLimits.swift in Sources */,
