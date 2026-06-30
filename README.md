@@ -11,8 +11,9 @@ macOS menu-bar app that tracks Claude Code and OpenAI Codex token usage in real 
 ## Features
 
 - **Menu-bar live stats** — 5-hour rolling window and weekly usage displayed as water-tank gauges
-- **Token rate indicator** — stacked bar gauge shows current throughput (idle → moderate → heavy → burst)
-- **Claude Code HUD** — registers itself as a `statusLine` provider; renders model, action, context %, rate-limit bars, git branch, active tool, and cost directly in the Claude Code prompt
+- **Token rate indicator** — stacked bar gauge shows current throughput (idle → moderate → heavy → burst), with configurable thresholds (manual or auto-calculated)
+- **Claude Code HUD** — registers itself as a `statusLine` provider; renders model, action, context %, rate-limit bars, git branch, active tool, reasoning effort, working directory, and cost directly in the Claude Code prompt
+- **Customizable HUD layout** — drag-and-drop fields across rows, reorder chips within a row, and set a per-field color (auto or one of 8 presets); single- or multi-line styles
 - **Codex support** — reads `~/.codex` session archives and shows today / weekly token counts alongside Claude
 - **Dashboard window** — session list, daily/weekly charts, per-project breakdown for both Claude and Codex
 - **Real-time file watching** — FSEvent-based, picks up new JSONL records the moment Claude Code writes them
@@ -74,10 +75,14 @@ The app writes `~/.claudemonitor/hud.sh` and registers it in `~/.claude/settings
 2. Renders a one-line status via `hud-render.mjs`:
 
 ```
-🔹 CC 1.x  🧠 claude-opus-4  ▶️ running  📊 ctx 42%  ⏱️ 5h 28%  📅 wk 15%  🌿 git main  💰 $0.12
+🔹 CC 1.x  🧠 claude-opus-4  ▶️ running  🧩 effort high  📊 ctx 42%  ⏱️ 5h 28%  📅 wk 15%  🌿 git main  💰 $0.12
 ```
 
-Configure which fields appear and the display style (emoji on/off, filled/outline, single/multiline) in **Settings → Claude → HUD Display**.
+Available fields: CC version, model, action, session, folder (short), full path, context, 5h, weekly, git, tool, agent, cost, and reasoning effort. Customize the layout in **Settings → Claude → HUD Display**:
+
+- **Drag-and-drop layout** — move fields between rows and reorder chips within a row
+- **Per-field color** — `auto` (dynamic, value-driven) or one of 8 presets (blue, purple, green, yellow, cyan, orange, red, gray)
+- **Display style** — emoji on/off, filled/outline bars, single- or multi-line
 
 If another tool (e.g. OMC) already occupies the `statusLine`, ClaudeMonitor chains behind it so both coexist.
 
@@ -113,7 +118,8 @@ The app keeps `~/Library/Application Support/ClaudeMonitor/active.sqlite` as a s
 |-----|--------|
 | Claude | Toggle Claude monitoring on/off |
 | Claude | HUD connection — register, unregister, or chain with existing HUD |
-| Claude | HUD display fields and style |
+| Claude | HUD layout — drag-and-drop fields, per-field colors, single/multi-line style |
+| Claude | Token-rate gauge thresholds (manual or auto-calculated) |
 | Codex | Toggle Codex monitoring on/off |
 | Codex | Custom `~/.codex` home path |
 
