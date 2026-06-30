@@ -21,6 +21,9 @@ final class AppState: ObservableObject {
 
     private var store: SQLiteStore
     private var parser: JSONLParser
+    /// 회고 수집 — 세션 파생 신호. 본 usage 파이프라인과 독립(best-effort, 단일 저장소).
+    private let featureParser = ClaudeSessionFeatureParser()
+    private let featureStore: SessionFeatureStore? = try? SessionFeatureStore(path: SessionFeatureStore.defaultPath())
     private var watcher: FSEventWatcher?
     private var profileCancellable: AnyCancellable?
     private var tokenHistory: [(date: Date, tokens: Int)] = []
@@ -85,6 +88,8 @@ final class AppState: ObservableObject {
         // Run file I/O on a background queue so the main actor / UI stays responsive
         let store = self.store
         let parser = self.parser
+        let featureParser = self.featureParser
+        let featureStore = self.featureStore
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
                 let fm = FileManager.default
@@ -97,6 +102,10 @@ final class AppState: ObservableObject {
                 for case let url as URL in enumerator where url.pathExtension == "jsonl" {
                     if let records = try? parser.parseNew(in: url), !records.isEmpty {
                         try? store.insert(records)
+                    }
+                    // 회고 수집(backfill 포함) — 파일 전체 → 세션 피처 upsert
+                    if let featureStore, let f = try? featureParser.parse(url) {
+                        try? featureStore.upsert(f)
                     }
                 }
                 continuation.resume()
@@ -111,6 +120,10 @@ final class AppState: ObservableObject {
                 if let records = try? self.parser.parseNew(in: url), !records.isEmpty {
                     try? self.store.insert(records)
                     await self.refresh()
+                }
+                // 회고 수집 — 변경된 세션 파일 재파싱 후 upsert
+                if let featureStore = self.featureStore, let f = try? self.featureParser.parse(url) {
+                    try? featureStore.upsert(f)
                 }
             }
         }

@@ -13,6 +13,7 @@
 		3F85887EF6A1ADC61E36A892 /* SessionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586053C67C6E14B7D97EF938 /* SessionReader.swift */; };
 		42D740C0B371BBBEBB9DC0D2 /* AnthropicUsageReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87CD60EF87CF0D1AAD95CCF6 /* AnthropicUsageReader.swift */; };
 		471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */; };
+		4A3A485F7C030F41E50B437E /* SessionFeatureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D1B78F337F58BAE3199BAF /* SessionFeatureStore.swift */; };
 		4B5B9002E14D19F2EA776645 /* ClaudeMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */; };
 		638D4DA0DB04EF50100273BE /* ClaudeCodeHUDConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB8FB400CDE3295D0382D0CF /* ClaudeCodeHUDConnector.swift */; };
 		92C8780A17067BCFE01176A1 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46DDDAE35FBBC7D8F01BA11 /* AppState.swift */; };
@@ -23,6 +24,7 @@
 		B3360F2AA375D4BCDAD082D9 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E8C5D572320C1859698AE1 /* DashboardView.swift */; };
 		BAD2E0F543A769F0F59DE8E6 /* SQLiteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */; };
 		C0B70CF38A6A0AA853808F58 /* ProfileStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */; };
+		C924BFB61106D1F4BA805E05 /* SessionFeatureStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D35FF9BC7516C3572294BFC /* SessionFeatureStoreTests.swift */; };
 		CFEBB7FCDA3E4B2B5A6E83EC /* ClaudeSessionFeatureParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A91F0901084F93E511243C6 /* ClaudeSessionFeatureParser.swift */; };
 		D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4F0139049AB7029E72F1BEB /* PricingTable.swift */; };
 		D7FCD950BF90744E8DF2CB3E /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 4FCF28A9277A18AC8034DE93 /* GRDB */; };
@@ -49,6 +51,8 @@
 		09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeMonitorTests.swift; sourceTree = "<group>"; };
 		13DDDF5B01814C7620139479 /* JSONLParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLParser.swift; sourceTree = "<group>"; };
 		20AD9838A3FA57813FE57DE7 /* ClaudeMonitorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeMonitorApp.swift; sourceTree = "<group>"; };
+		26D1B78F337F58BAE3199BAF /* SessionFeatureStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionFeatureStore.swift; sourceTree = "<group>"; };
+		2D35FF9BC7516C3572294BFC /* SessionFeatureStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionFeatureStoreTests.swift; sourceTree = "<group>"; };
 		31C17EE3254080CBA8B0DD22 /* JSONLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLParserTests.swift; sourceTree = "<group>"; };
 		3A91F0901084F93E511243C6 /* ClaudeSessionFeatureParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSessionFeatureParser.swift; sourceTree = "<group>"; };
 		4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingTableTests.swift; sourceTree = "<group>"; };
@@ -120,6 +124,7 @@
 				4CCDCFC0B66516097C5FDAF8 /* ClaudeSessionFeatureParserTests.swift */,
 				31C17EE3254080CBA8B0DD22 /* JSONLParserTests.swift */,
 				4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */,
+				2D35FF9BC7516C3572294BFC /* SessionFeatureStoreTests.swift */,
 				93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */,
 			);
 			path = ClaudeMonitorTests;
@@ -165,6 +170,7 @@
 				F4F0139049AB7029E72F1BEB /* PricingTable.swift */,
 				89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */,
 				A12671792E480FCCA7307993 /* SessionFeatures.swift */,
+				26D1B78F337F58BAE3199BAF /* SessionFeatureStore.swift */,
 				586053C67C6E14B7D97EF938 /* SessionReader.swift */,
 				C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */,
 				FCFFE24F64246E1FC672EBD3 /* UsageLimits.swift */,
@@ -258,6 +264,7 @@
 				F050D6199EA08714A355A510 /* JSONLParserTests.swift in Sources */,
 				B032D0CE35CD41E134501DB1 /* PricingTableTests.swift in Sources */,
 				BAD2E0F543A769F0F59DE8E6 /* SQLiteStoreTests.swift in Sources */,
+				C924BFB61106D1F4BA805E05 /* SessionFeatureStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -278,6 +285,7 @@
 				D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */,
 				C0B70CF38A6A0AA853808F58 /* ProfileStore.swift in Sources */,
 				471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */,
+				4A3A485F7C030F41E50B437E /* SessionFeatureStore.swift in Sources */,
 				F30ACF9B546AED5A12FCBC12 /* SessionFeatures.swift in Sources */,
 				3F85887EF6A1ADC61E36A892 /* SessionReader.swift in Sources */,
 				3CA6C1568C9356545E9DB686 /* SettingsView.swift in Sources */,
