@@ -66,6 +66,17 @@ struct ProcessCommandRunner: CommandRunning {
         env["PATH"] = (env["PATH"].map { "\($0):\(extra)" }) ?? extra
         proc.environment = env
 
+        // 출력을 동시에 드레인 — 파이프 버퍼(64KB)가 차서 프로세스가 막히는 교착 방지
+        let outHandle = outPipe.fileHandleForReading
+        var collected = Data()
+        let lock = NSLock()
+        let readDone = DispatchSemaphore(value: 0)
+        DispatchQueue.global(qos: .userInitiated).async {
+            let d = outHandle.readDataToEndOfFile()   // EOF(프로세스 종료) 까지 블록
+            lock.lock(); collected = d; lock.unlock()
+            readDone.signal()
+        }
+
         try proc.run()
         if let stdin, let d = stdin.data(using: .utf8) { inPipe.fileHandleForWriting.write(d) }
         try? inPipe.fileHandleForWriting.close()
@@ -76,8 +87,8 @@ struct ProcessCommandRunner: CommandRunning {
             proc.terminate()
             throw HeadlessError.timedOut
         }
-        // 회고 출력은 작아(수 KB) 종료 후 일괄 읽기로 충분
-        let data = outPipe.fileHandleForReading.readDataToEndOfFile()
+        readDone.wait()
+        lock.lock(); let data = collected; lock.unlock()
         return (String(data: data, encoding: .utf8) ?? "", proc.terminationStatus)
     }
 }

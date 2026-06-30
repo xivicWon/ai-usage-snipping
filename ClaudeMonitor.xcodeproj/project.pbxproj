@@ -15,6 +15,7 @@
 		3CA6C1568C9356545E9DB686 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1A59A342834B6B14EFCCA0 /* SettingsView.swift */; };
 		3F85887EF6A1ADC61E36A892 /* SessionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 586053C67C6E14B7D97EF938 /* SessionReader.swift */; };
 		42D740C0B371BBBEBB9DC0D2 /* AnthropicUsageReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87CD60EF87CF0D1AAD95CCF6 /* AnthropicUsageReader.swift */; };
+		44AAC9574100C1C7C1CBA59A /* RetrospectiveViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A96F93421D78BD6F2F62EF7C /* RetrospectiveViewModel.swift */; };
 		471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */; };
 		4A3A485F7C030F41E50B437E /* SessionFeatureStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D1B78F337F58BAE3199BAF /* SessionFeatureStore.swift */; };
 		4B5B9002E14D19F2EA776645 /* ClaudeMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E8D5988D604E2F516BFDDC /* ClaudeMonitorTests.swift */; };
@@ -28,6 +29,7 @@
 		A319210622A1BAD45DB17BAD /* RetrospectiveReportStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2A8F771FF134F28C220C81E /* RetrospectiveReportStoreTests.swift */; };
 		A3670779B5D381B44B9E16BF /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB78E9A3A21D02510026017C /* MenuBarView.swift */; };
 		A4279A2AEA51CB504671DF7F /* ClaudeMonitorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20AD9838A3FA57813FE57DE7 /* ClaudeMonitorApp.swift */; };
+		A6EED3504E8E754916AFC729 /* RetrospectiveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92AFE23B266B24CC2575EBE4 /* RetrospectiveView.swift */; };
 		B032D0CE35CD41E134501DB1 /* PricingTableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */; };
 		B3360F2AA375D4BCDAD082D9 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2E8C5D572320C1859698AE1 /* DashboardView.swift */; };
 		BAD2E0F543A769F0F59DE8E6 /* SQLiteStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */; };
@@ -80,12 +82,14 @@
 		87CD60EF87CF0D1AAD95CCF6 /* AnthropicUsageReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnthropicUsageReader.swift; sourceTree = "<group>"; };
 		89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStore.swift; sourceTree = "<group>"; };
 		8FBE489899C9E98297FCAF6F /* ClaudeHeadlessRunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHeadlessRunnerTests.swift; sourceTree = "<group>"; };
+		92AFE23B266B24CC2575EBE4 /* RetrospectiveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveView.swift; sourceTree = "<group>"; };
 		93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStoreTests.swift; sourceTree = "<group>"; };
 		9924D1F6FBFD4F220629C2E2 /* ClaudeMonitor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClaudeMonitor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A12671792E480FCCA7307993 /* SessionFeatures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionFeatures.swift; sourceTree = "<group>"; };
 		A46DDDAE35FBBC7D8F01BA11 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A4A17B20EE921EFBB588FBB1 /* RetrospectiveReport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveReport.swift; sourceTree = "<group>"; };
 		A694C018F13572E6F47C48F2 /* ClaudeMonitorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ClaudeMonitorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A96F93421D78BD6F2F62EF7C /* RetrospectiveViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveViewModel.swift; sourceTree = "<group>"; };
 		AB8FB400CDE3295D0382D0CF /* ClaudeCodeHUDConnector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeHUDConnector.swift; sourceTree = "<group>"; };
 		AC1A59A342834B6B14EFCCA0 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B7585350EA6844232DA1BEA3 /* RetrospectivePromptBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectivePromptBuilderTests.swift; sourceTree = "<group>"; };
@@ -176,6 +180,8 @@
 			children = (
 				E2E8C5D572320C1859698AE1 /* DashboardView.swift */,
 				FB78E9A3A21D02510026017C /* MenuBarView.swift */,
+				92AFE23B266B24CC2575EBE4 /* RetrospectiveView.swift */,
+				A96F93421D78BD6F2F62EF7C /* RetrospectiveViewModel.swift */,
 				AC1A59A342834B6B14EFCCA0 /* SettingsView.swift */,
 			);
 			path = MenuBar;
@@ -336,6 +342,8 @@
 				FEEF00A601831B9BE64C9ADE /* RetrospectivePromptBuilder.swift in Sources */,
 				CF12AEC429CD86501C4FC299 /* RetrospectiveReport.swift in Sources */,
 				350CFF2DDF35A33EE9BACDB1 /* RetrospectiveReportStore.swift in Sources */,
+				A6EED3504E8E754916AFC729 /* RetrospectiveView.swift in Sources */,
+				44AAC9574100C1C7C1CBA59A /* RetrospectiveViewModel.swift in Sources */,
 				471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */,
 				4A3A485F7C030F41E50B437E /* SessionFeatureStore.swift in Sources */,
 				F30ACF9B546AED5A12FCBC12 /* SessionFeatures.swift in Sources */,
