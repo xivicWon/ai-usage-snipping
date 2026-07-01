@@ -1,6 +1,6 @@
 # ClaudeMonitor
 
-macOS menu-bar app that tracks Claude Code and OpenAI Codex token usage in real time.
+A macOS menu-bar app that tracks your Claude Code and OpenAI Codex token usage in real time — and turns that activity into a **usage-pattern retrospective**: it quietly records how you work (without storing conversation text), then, on demand or on a schedule, has Claude look back and tell you what your habits actually look like.
 
 ![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange) ![Version](https://img.shields.io/badge/version-1.4.0-green)
 
@@ -10,6 +10,7 @@ macOS menu-bar app that tracks Claude Code and OpenAI Codex token usage in real 
 
 ## Features
 
+- **Usage-pattern retrospective** — analyzes your real work sessions (bots/automation filtered out) and generates a look-back via headless `claude -p`; two styles: **standard** (a grounded coaching review) and **roast** (a brutally honest one). Manual "generate now" or automatic on a cadence, with a new-retro badge on the menu-bar icon. No API key needed — it reuses your logged-in Claude Code
 - **Menu-bar live stats** — 5-hour rolling window and weekly usage displayed as water-tank gauges
 - **Token rate indicator** — stacked bar gauge shows current throughput (idle → moderate → heavy → burst), with configurable thresholds (manual or auto-calculated)
 - **Claude Code HUD** — registers itself as a `statusLine` provider; renders model, action, context %, rate-limit bars, git branch, active tool, reasoning effort, working directory, and cost directly in the Claude Code prompt
@@ -35,20 +36,39 @@ On first launch the app:
 2. Silently registers itself as the Claude Code `statusLine` provider (only if the slot is empty)
 3. Starts scanning `~/.claude/projects` for existing session records
 
-## Building from Source
+## Running with Xcode
+
+**Prerequisites:** macOS 13+, Xcode 15+, and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`). The Xcode project is generated from `project.yml`, so you regenerate it after cloning or whenever files are added.
 
 ```bash
-git clone https://github.com/xivic/claude-monitor.git
-cd claude-monitor
-xcodegen generate          # requires: brew install xcodegen
+git clone https://github.com/xivicWon/ai-usage-snipping.git
+cd ai-usage-snipping
+xcodegen generate            # writes ClaudeMonitor.xcodeproj from project.yml
 open ClaudeMonitor.xcodeproj
 ```
 
-Build and run the `ClaudeMonitor` scheme in Xcode, or:
+In Xcode:
+
+1. Select the **ClaudeMonitor** scheme (top toolbar) and **My Mac** as the run destination.
+2. Press **⌘R** (Product ▸ Run).
+3. ClaudeMonitor is a **menu-bar (accessory) app — it has no Dock icon or window on launch.** Look for its icon in the **top-right menu bar**; click it for the popover, and use *Open Dashboard* for the retrospective/charts window.
+4. To stop, press **⌘.** in Xcode (or *Quit* from the menu-bar popover).
+
+Run the tests with **⌘U**, or from the command line:
+
+```bash
+xcodebuild test -scheme ClaudeMonitor -destination 'platform=macOS'
+```
+
+Build a release binary (ad-hoc signed) without opening Xcode:
 
 ```bash
 xcodebuild -scheme ClaudeMonitor -configuration Release build
+# or build a distributable .dmg:
+./scripts/build-dmg.sh
 ```
+
+> **Signing note:** releases are ad-hoc signed (no Apple Developer account). On first launch macOS Gatekeeper may block it — right-click the app ▸ **Open**, or run `xattr -dr com.apple.quarantine /Applications/ClaudeMonitor.app`. macOS system notifications also require proper signing, so the "new retrospective" alert is shown as a menu-bar badge instead.
 
 ## Menu Bar
 
@@ -112,6 +132,19 @@ Today      :    203455 tokens  ($0.8821)
 
 The app keeps `~/Library/Application Support/ClaudeMonitor/active.sqlite` as a stable symlink to the current profile's database, so external scripts can always query the same path.
 
+## Usage-Pattern Retrospective
+
+The **🪞 Retrospective** tab in the Dashboard turns your recorded activity into a look-back on *how you actually use AI*.
+
+- **What it uses** — small, derived per-session signals only (goals, tool mix, edited files, errors, mid-session interrupts, tokens, time-of-day). **Conversation text is never stored.** Bot/automation sessions (sub-agent orchestration, review bots, `.claude-brief` runs) are detected and excluded so the stats reflect *your* work.
+- **How it generates** — the aggregated stats are sent through headless `claude -p` (your logged-in Claude Code — no API key, one call per run). Pick a period (1 day / 3 days / 7 days) and a style, then **Generate now**, or let it run on a schedule.
+- **Two styles**
+  - **Standard** — a grounded coaching review; every improvement point must cite a concrete number, no generic platitudes.
+  - **Roast (갱생 회고)** — "roast me, based on everything you know about me," still grounded in your real numbers.
+- **Where you see it** — read reports in the tab (Markdown), browse past ones in the history sidebar, and **Copy** any report to the clipboard. When a scheduled retrospective is ready, a green dot appears on the menu-bar icon and the *Retrospective* row until you open it.
+
+Set the cadence in **Settings → 회고**: off / daily / every 3 days / weekly. Everything runs locally; nothing is uploaded.
+
 ## Settings
 
 | Tab | Option |
@@ -122,6 +155,7 @@ The app keeps `~/Library/Application Support/ClaudeMonitor/active.sqlite` as a s
 | Claude | Token-rate gauge thresholds (manual or auto-calculated) |
 | Codex | Toggle Codex monitoring on/off |
 | Codex | Custom `~/.codex` home path |
+| 회고 | Retrospective cadence (off / daily / 3-day / weekly) + new-retro alert toggle |
 
 ## Architecture
 
@@ -138,6 +172,17 @@ The app keeps `~/Library/Application Support/ClaudeMonitor/active.sqlite` as a s
          │
          ▼ file-descriptor watcher
     AnthropicUsageReader → rate-limit overlays
+
+# Retrospective pipeline
+~/.claude/projects/**/*.jsonl
+         │ ClaudeSessionFeatureParser  (text discarded, bots flagged)
+         ▼
+    SessionFeatureStore (features.sqlite)
+         │ RetrospectiveAggregator (human sessions only)
+         ▼
+    RetrospectivePromptBuilder → claude -p → RetrospectiveReportStore
+         ▲                                          │
+    scheduler / "generate now"              Dashboard 회고 tab
 ```
 
 See [`docs/diagrams/`](docs/diagrams/) for PlantUML architecture, data-flow, and schema diagrams.
