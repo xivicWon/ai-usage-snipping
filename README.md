@@ -2,7 +2,7 @@
 
 A macOS menu-bar app that tracks your Claude Code and OpenAI Codex token usage in real time — and turns that activity into a **usage-pattern retrospective**: it quietly records how you work (without storing conversation text), then, on demand or on a schedule, has Claude look back and tell you what your habits actually look like.
 
-![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange) ![Version](https://img.shields.io/badge/version-1.4.1-green)
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange) ![Version](https://img.shields.io/badge/version-1.5.0-green)
 
 **English** · [한국어](README.ko.md)
 

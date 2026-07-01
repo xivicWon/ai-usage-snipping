@@ -23,8 +23,8 @@ targets:
       path: ClaudeMonitor/Info.plist
       properties:
         CFBundleName: ClaudeMonitor
-        CFBundleShortVersionString: "1.4.1"
-        CFBundleVersion: "9"
+        CFBundleShortVersionString: "1.5.0"
+        CFBundleVersion: "10"
         LSUIElement: true
         NSHumanReadableDescription: Claude Code usage monitor
     entitlements:
