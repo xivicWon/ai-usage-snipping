@@ -5,6 +5,13 @@ struct SettingsView: View {
     @ObservedObject private var limits = UsageLimits.shared
     @State private var autoCalcMessage: String?
     @State private var isCalculating = false
+    // 회고 데이터 현황/청소
+    @State private var featureCount = 0
+    @State private var reportCount = 0
+    @State private var featureSize = "–"
+    @State private var reportSize = "–"
+    @State private var confirmClearFeatures = false
+    @State private var confirmClearReports = false
 
     var body: some View {
         TabView {
@@ -144,8 +151,35 @@ struct SettingsView: View {
             } header: {
                 Text("마지막 회고")
             }
+
+            Section {
+                LabeledContent("수집된 세션", value: "\(featureCount)개 · \(featureSize)")
+                LabeledContent("저장된 회고", value: "\(reportCount)건 · \(reportSize)")
+                Button("수집 데이터 비우기", role: .destructive) { confirmClearFeatures = true }
+                Button("회고 기록 비우기", role: .destructive) { confirmClearReports = true }
+            } header: {
+                Text("저장된 데이터")
+            } footer: {
+                Text("수집 데이터는 ~/.claude/projects 트랜스크립트에서 파생된 신호라, 비워도 다음 스캔 때 다시 채워집니다(원문은 저장 안 함). 회고 기록은 비우면 영구 삭제됩니다.")
+                    .foregroundStyle(.secondary).font(.caption)
+            }
         }
         .formStyle(.grouped)
+        .onAppear(perform: loadDataStats)
+        .confirmationDialog("수집된 세션 신호를 모두 삭제할까요?", isPresented: $confirmClearFeatures, titleVisibility: .visible) {
+            Button("모두 삭제", role: .destructive) {
+                try? SessionFeatureStore(path: SessionFeatureStore.defaultPath()).deleteAll()
+                loadDataStats()
+            }
+            Button("취소", role: .cancel) {}
+        }
+        .confirmationDialog("저장된 회고를 모두 삭제할까요? (되돌릴 수 없음)", isPresented: $confirmClearReports, titleVisibility: .visible) {
+            Button("모두 삭제", role: .destructive) {
+                try? RetrospectiveReportStore(path: RetrospectiveReportStore.defaultPath()).deleteAll()
+                loadDataStats()
+            }
+            Button("취소", role: .cancel) {}
+        }
     }
 
     private var lastRetroText: String {
@@ -153,6 +187,20 @@ struct SettingsView: View {
               let last = try? store.latest() else { return "아직 생성된 회고가 없습니다." }
         let f = DateFormatter(); f.locale = Locale(identifier: "ko_KR"); f.dateFormat = "M/d a h:mm"
         return "\(last.periodLabel) · \(f.string(from: last.generatedAt))"
+    }
+
+    /// 수집/회고 데이터 현황을 로드한다.
+    private func loadDataStats() {
+        featureCount = (try? SessionFeatureStore(path: SessionFeatureStore.defaultPath()).count()) ?? 0
+        reportCount = (try? RetrospectiveReportStore(path: RetrospectiveReportStore.defaultPath()).count()) ?? 0
+        featureSize = Self.fileSize(SessionFeatureStore.defaultPath())
+        reportSize = Self.fileSize(RetrospectiveReportStore.defaultPath())
+    }
+
+    private static func fileSize(_ path: String) -> String {
+        let attrs = try? FileManager.default.attributesOfItem(atPath: path)
+        let bytes = (attrs?[.size] as? Int) ?? 0
+        return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
     }
 
     // MARK: - Codex tab

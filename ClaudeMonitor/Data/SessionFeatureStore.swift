@@ -86,6 +86,11 @@ final class SessionFeatureStore {
         try dbQueue.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM sessionFeature") ?? 0 }
     }
 
+    /// 수집된 세션 신호를 전부 삭제한다.
+    func deleteAll() throws {
+        try dbQueue.write { db in try db.execute(sql: "DELETE FROM sessionFeature") }
+    }
+
     // MARK: - JSON helpers
 
     private static func encode<T: Encodable>(_ v: T) -> String {
