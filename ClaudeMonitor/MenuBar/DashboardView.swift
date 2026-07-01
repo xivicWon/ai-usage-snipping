@@ -12,6 +12,7 @@ struct DashboardView: View {
     enum AITool: String, CaseIterable {
         case claude = "Claude"
         case codex  = "Codex"
+        case retro  = "🪞 회고"
     }
 
     var body: some View {
@@ -24,7 +25,7 @@ struct DashboardView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 200)
+                .frame(width: 300)
                 Spacer()
             }
             .padding(.horizontal, 16)
@@ -33,16 +34,19 @@ struct DashboardView: View {
 
             Divider()
 
-            if selectedTool == .claude {
+            switch selectedTool {
+            case .claude:
                 HSplitView {
                     sessionSidebar.frame(minWidth: 180, maxWidth: 220)
                     usageContent
                 }
-            } else {
+            case .codex:
                 HSplitView {
                     codexSidebar.frame(minWidth: 180, maxWidth: 220)
                     codexContent
                 }
+            case .retro:
+                RetrospectiveView()
             }
         }
         .frame(width: 760, height: 520)
