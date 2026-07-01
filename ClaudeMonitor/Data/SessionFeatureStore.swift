@@ -86,6 +86,17 @@ final class SessionFeatureStore {
         try dbQueue.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM sessionFeature") ?? 0 }
     }
 
+    /// 가장 최근에 갱신된 세션 ≈ 현재 활성 세션. (endedAt, 없으면 startedAt 기준 내림차순)
+    /// 라이브 어드바이저의 현재 세션 신호 소스.
+    func latestSession() throws -> SessionFeatures? {
+        try dbQueue.read { db in
+            try Row.fetchOne(db, sql: """
+                SELECT * FROM sessionFeature
+                ORDER BY COALESCE(endedAt, startedAt) DESC LIMIT 1
+                """).map(Self.decode)
+        }
+    }
+
     /// 수집된 세션 신호를 전부 삭제한다.
     func deleteAll() throws {
         try dbQueue.write { db in try db.execute(sql: "DELETE FROM sessionFeature") }

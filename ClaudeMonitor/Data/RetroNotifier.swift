@@ -61,3 +61,29 @@ final class RetroBadge: ObservableObject {
         hasUnseen = false
     }
 }
+
+/// "새 조언 미확인" 배지 — 라이브 어드바이저용(RetroBadge 패턴, 서명 무관).
+final class AdvisorBadge: ObservableObject {
+    static let shared = AdvisorBadge()
+    @Published private(set) var hasUnseen = false
+
+    private let store = try? AdvisorAdviceStore(path: AdvisorAdviceStore.defaultPath())
+    private let key = "advisor_last_seen"
+
+    private init() { refresh() }
+
+    /// 최신 조언이 마지막으로 본 것보다 새로우면 배지 켬.
+    func refresh() {
+        guard let latest = try? store?.latest() ?? nil else { hasUnseen = false; return }
+        let lastSeen = UserDefaults.standard.double(forKey: key)
+        hasUnseen = latest.generatedAt.timeIntervalSince1970 > lastSeen + 0.5
+    }
+
+    /// 조언 탭을 열었을 때 호출 — 최신 조언을 본 것으로 표시.
+    func markSeen() {
+        if let latest = try? store?.latest() ?? nil {
+            UserDefaults.standard.set(latest.generatedAt.timeIntervalSince1970, forKey: key)
+        }
+        hasUnseen = false
+    }
+}

@@ -71,6 +71,19 @@ final class UsageLimits: ObservableObject {
         didSet { defaults.set(retroNotify, forKey: "retro_notify") }
     }
 
+    // MARK: - 라이브 어드바이저
+    /// 조건 트리거 기반 라이브 조언 사용 여부. 기본 끔(opt-in).
+    @Published var advisorEnabled: Bool {
+        didSet { defaults.set(advisorEnabled, forKey: "advisor_enabled") }
+    }
+    /// 휴리스틱 체크 주기(분). 기본 10.
+    @Published var advisorIntervalMinutes: Int {
+        didSet { defaults.set(advisorIntervalMinutes, forKey: "advisor_interval_minutes") }
+    }
+    /// 새 조언 생성 시 배지 표시 여부. 기본 true.
+    @Published var advisorNotify: Bool {
+        didSet { defaults.set(advisorNotify, forKey: "advisor_notify") }
+    }
     // MARK: - AI 뉴스 데일리
     /// 뉴스 다이제스트 생성 주기. 기본 끔.
     @Published var newsInterval: NewsInterval {
@@ -93,6 +106,9 @@ final class UsageLimits: ObservableObject {
         rateLevel3Min       = defaults.object(forKey: "rate_level3_min") as? Int ?? Self.defaultRateLevel3
         retroInterval       = RetroInterval(rawValue: defaults.string(forKey: "retro_interval") ?? "") ?? .off
         retroNotify         = defaults.object(forKey: "retro_notify") as? Bool ?? true
+        advisorEnabled      = defaults.object(forKey: "advisor_enabled") as? Bool ?? false
+        advisorIntervalMinutes = defaults.object(forKey: "advisor_interval_minutes") as? Int ?? 10
+        advisorNotify       = defaults.object(forKey: "advisor_notify") as? Bool ?? true
         newsInterval        = NewsInterval(rawValue: defaults.string(forKey: "news_interval") ?? "") ?? .off
         newsNotify          = defaults.object(forKey: "news_notify") as? Bool ?? true
     }

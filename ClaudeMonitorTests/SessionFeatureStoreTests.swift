@@ -56,6 +56,16 @@ final class SessionFeatureStoreTests: XCTestCase {
         XCTAssertEqual(got.first?.goalCount, 5)
     }
 
+    func test_latestSession_returns_most_recent_by_endedAt() throws {
+        try sut.upsert(make(id: "OLD", started: day.addingTimeInterval(-3600)))
+        try sut.upsert(make(id: "NEW", started: day))
+        XCTAssertEqual(try sut.latestSession()?.sessionId, "NEW")
+    }
+
+    func test_latestSession_nil_when_empty() throws {
+        XCTAssertNil(try sut.latestSession())
+    }
+
     func test_features_filters_by_startedAt_window() throws {
         try sut.upsert(make(id: "IN", started: day))
         try sut.upsert(make(id: "OUT", started: day.addingTimeInterval(-7 * 24 * 3600)))

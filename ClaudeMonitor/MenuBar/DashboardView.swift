@@ -11,10 +11,11 @@ struct DashboardView: View {
     @ObservedObject private var router = DashboardRouter.shared
 
     enum AITool: String, CaseIterable {
-        case claude = "Claude"
-        case codex  = "Codex"
-        case retro  = "🪞 회고"
-        case news   = "📰 뉴스"
+        case claude  = "Claude"
+        case codex   = "Codex"
+        case retro   = "🪞 회고"
+        case advisor = "💡 어드바이저"
+        case news    = "📰 뉴스"
     }
 
     var body: some View {
@@ -49,6 +50,8 @@ struct DashboardView: View {
                 }
             case .retro:
                 RetrospectiveView()
+            case .advisor:
+                AdvisorView()
             case .news:
                 NewsView()
             }
