@@ -14,6 +14,7 @@ struct DashboardView: View {
         case claude = "Claude"
         case codex  = "Codex"
         case retro  = "🪞 회고"
+        case news   = "📰 뉴스"
     }
 
     var body: some View {
@@ -26,7 +27,7 @@ struct DashboardView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 300)
+                .frame(width: 400)
                 Spacer()
             }
             .padding(.horizontal, 16)
@@ -48,6 +49,8 @@ struct DashboardView: View {
                 }
             case .retro:
                 RetrospectiveView()
+            case .news:
+                NewsView()
             }
         }
         .frame(width: 760, height: 520)
