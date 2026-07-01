@@ -72,13 +72,26 @@ final class AnthropicUsageReader: ObservableObject {
     private var discoveredPaths: [URL] = []
     private let lock = NSLock()
     private var discoveryTimer: DispatchSourceTimer?
+    private var reloadTimer: DispatchSourceTimer?
 
     private var watchers: [DispatchSourceFileSystemObject] = []
 
     private init() {
         reload()
         startWatching()
+        startReloadTimer()
         startDiscovery()
+    }
+
+    /// 알려진 캐시를 짧은 주기로 다시 읽는다.
+    /// hud.sh 가 hud-cache.json 을 제자리 덮어쓰기(`>`)하면 디렉터리 감시가 울리지 않아
+    /// 5분 discovery 타이머에만 의존하게 되므로, 15초 폴링으로 최신값을 반영한다.
+    private func startReloadTimer() {
+        let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
+        timer.schedule(deadline: .now() + 15, repeating: 15)
+        timer.setEventHandler { [weak self] in self?.reload() }
+        timer.resume()
+        reloadTimer = timer
     }
 
     private func allCandidates() -> [URL] {
