@@ -94,6 +94,7 @@ struct MenuBarView: View {
     @ObservedObject private var limits     = UsageLimits.shared
     @ObservedObject private var badge      = RetroBadge.shared
     @ObservedObject private var advisorBadge = AdvisorBadge.shared
+    @ObservedObject private var newsBadge  = NewsBadge.shared
     @ObservedObject private var updater    = UpdateChecker.shared
     let openDashboard: () -> Void
     let openSettings: () -> Void
@@ -364,6 +365,7 @@ struct MenuBarView: View {
                 Divider()
             }
             retroRow
+            newsRow
             Divider()
             advisorRow
             Divider()
@@ -398,6 +400,19 @@ struct MenuBarView: View {
             }
             if advisorBadge.hasUnseen {
                 Circle().fill(Color.orange).frame(width: 7, height: 7).padding(.trailing, 14)
+            }
+        }
+    }
+
+    /// 뉴스 열기 — 새 뉴스 미확인 시 초록 점 배지.
+    private var newsRow: some View {
+        HStack(spacing: 0) {
+            MenuItemRow(label: newsBadge.hasUnseen ? "뉴스  · 새 뉴스" : "뉴스", icon: "newspaper") {
+                DashboardRouter.shared.requestedTool = DashboardView.AITool.news.rawValue
+                openDashboard()
+            }
+            if newsBadge.hasUnseen {
+                Circle().fill(Color.green).frame(width: 7, height: 7).padding(.trailing, 14)
             }
         }
     }
