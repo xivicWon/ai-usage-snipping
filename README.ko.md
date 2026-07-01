@@ -2,7 +2,7 @@
 
 Claude Code와 OpenAI Codex의 토큰 사용량을 실시간으로 추적하고, 그 활동을 **사용패턴 회고**로 바꿔주는 macOS 메뉴바 앱입니다. 대화 내용은 저장하지 않고 "어떻게 작업하는지"만 조용히 기록해 두었다가, 원할 때 또는 주기적으로 Claude가 그 습관을 되짚어 알려줍니다.
 
-![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange) ![Version](https://img.shields.io/badge/version-1.4.1-green)
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange) ![Version](https://img.shields.io/badge/version-1.5.0-green)
 
 [English](README.md) · **한국어**
 
