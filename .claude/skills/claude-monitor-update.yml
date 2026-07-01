@@ -1,0 +1,44 @@
+---
+name: claude-monitor-update
+description: Build ClaudeMonitor from source and launch it
+category: development
+icon: 📊
+requires:
+  - xcodebuild
+  - xcodegen
+  - hdiutil
+  - open
+version: "2.0"
+tags:
+  - automation
+  - macos
+  - monitor
+  - claude-code
+  - build
+
+command: |
+  bash "$(dirname "$0")/update-and-run-monitor.sh"
+
+help: |
+  Builds ClaudeMonitor from the latest source code,
+  installs it to /Applications, and launches it.
+
+  Usage: /claude-monitor-update
+
+  This skill:
+  1. Verifies Xcode and XcodeGen are installed
+  2. Generates Xcode project from project.yml (if needed)
+  3. Builds a Release binary with ad-hoc signing
+  4. Creates a distributable DMG
+  5. Installs ClaudeMonitor.app to /Applications
+  6. Launches the application
+
+  Requirements:
+  - macOS 13+ (Ventura or later)
+  - Xcode 15+
+  - XcodeGen (brew install xcodegen)
+  - Write permission to /Applications
+
+examples:
+  - "/claude-monitor-update"
+  - "pm /claude-monitor-update"
