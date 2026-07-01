@@ -34,3 +34,30 @@ final class DashboardRouter: ObservableObject {
     @Published var requestedTool: String?
     private init() {}
 }
+
+/// "새 회고 미확인" 배지 상태 — OS 알림 대신 메뉴바/탭에 점으로 표시(서명 무관).
+/// 마지막으로 본 회고 시각과 최신 회고를 비교한다.
+final class RetroBadge: ObservableObject {
+    static let shared = RetroBadge()
+    @Published private(set) var hasUnseen = false
+
+    private let store = try? RetrospectiveReportStore(path: RetrospectiveReportStore.defaultPath())
+    private let key = "retro_last_seen"
+
+    private init() { refresh() }
+
+    /// 최신 회고가 마지막으로 본 것보다 새로우면 배지 켬.
+    func refresh() {
+        guard let latest = try? store?.latest() ?? nil else { hasUnseen = false; return }
+        let lastSeen = UserDefaults.standard.double(forKey: key)
+        hasUnseen = latest.generatedAt.timeIntervalSince1970 > lastSeen + 0.5
+    }
+
+    /// 회고 탭을 열었을 때 호출 — 최신 회고를 본 것으로 표시.
+    func markSeen() {
+        if let latest = try? store?.latest() ?? nil {
+            UserDefaults.standard.set(latest.generatedAt.timeIntervalSince1970, forKey: key)
+        }
+        hasUnseen = false
+    }
+}

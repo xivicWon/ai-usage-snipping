@@ -76,8 +76,11 @@ final class AppState: ObservableObject {
             let report = try? engine.generate(period: period)
             DispatchQueue.main.async {
                 self?.isGeneratingRetro = false
-                if let report, notify {
-                    RetroNotifier.shared.notifyNewRetrospective(periodLabel: report.periodLabel)
+                if let report {
+                    RetroBadge.shared.refresh()   // 서명 무관 배지
+                    if notify {                    // OS 알림(정식 서명 시 동작)
+                        RetroNotifier.shared.notifyNewRetrospective(periodLabel: report.periodLabel)
+                    }
                 }
             }
         }

@@ -92,6 +92,7 @@ struct MenuBarView: View {
     @ObservedObject private var sessions   = SessionReader.shared
     @ObservedObject private var codexReader = CodexSessionReader.shared
     @ObservedObject private var limits     = UsageLimits.shared
+    @ObservedObject private var badge      = RetroBadge.shared
     let openDashboard: () -> Void
     let openSettings: () -> Void
 
@@ -354,12 +355,27 @@ struct MenuBarView: View {
 
     private var menuButtons: some View {
         VStack(spacing: 0) {
+            retroRow
+            Divider()
             MenuItemRow(label: "대시보드 열기", icon: "chart.bar") { openDashboard() }
             Divider()
             MenuItemRow(label: "설정", icon: "gear") { openSettings() }
             Divider()
             MenuItemRow(label: "종료", icon: "power") { NSApplication.shared.terminate(nil) }
 
+        }
+    }
+
+    /// 회고 열기 — 새 회고 미확인 시 초록 점 배지.
+    private var retroRow: some View {
+        HStack(spacing: 0) {
+            MenuItemRow(label: badge.hasUnseen ? "회고  · 새 회고" : "회고", icon: "sparkles") {
+                DashboardRouter.shared.requestedTool = DashboardView.AITool.retro.rawValue
+                openDashboard()
+            }
+            if badge.hasUnseen {
+                Circle().fill(Color.green).frame(width: 7, height: 7).padding(.trailing, 14)
+            }
         }
     }
 
