@@ -61,6 +61,16 @@ final class UsageLimits: ObservableObject {
         rateLevel3Min = Self.defaultRateLevel3
     }
 
+    // MARK: - 회고 자동 생성
+    /// 회고 발송 주기. 기본 끔.
+    @Published var retroInterval: RetroInterval {
+        didSet { defaults.set(retroInterval.rawValue, forKey: "retro_interval") }
+    }
+    /// 새 회고 생성 시 알림 발송 여부. 기본 true.
+    @Published var retroNotify: Bool {
+        didSet { defaults.set(retroNotify, forKey: "retro_notify") }
+    }
+
     private init() {
         accountEmail        = defaults.string(forKey: "account_email") ?? ""
         windowLimitTokens   = defaults.integer(forKey: "limit_window_tokens")
@@ -71,6 +81,8 @@ final class UsageLimits: ObservableObject {
         rateLevel1Min       = defaults.object(forKey: "rate_level1_min") as? Int ?? Self.defaultRateLevel1
         rateLevel2Min       = defaults.object(forKey: "rate_level2_min") as? Int ?? Self.defaultRateLevel2
         rateLevel3Min       = defaults.object(forKey: "rate_level3_min") as? Int ?? Self.defaultRateLevel3
+        retroInterval       = RetroInterval(rawValue: defaults.string(forKey: "retro_interval") ?? "") ?? .off
+        retroNotify         = defaults.object(forKey: "retro_notify") as? Bool ?? true
     }
 
     func percentRemaining(used: Int, limit: Int) -> Double? {

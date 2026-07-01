@@ -25,6 +25,12 @@ final class AppState: ObservableObject {
     private let featureParser = ClaudeSessionFeatureParser()
     private let featureStore: SessionFeatureStore? = try? SessionFeatureStore(path: SessionFeatureStore.defaultPath())
     private var watcher: FSEventWatcher?
+
+    // 회고 자동 생성 스케줄
+    private let retroReportStore: RetrospectiveReportStore? = try? RetrospectiveReportStore(path: RetrospectiveReportStore.defaultPath())
+    private var retroEngine: RetrospectiveEngine?
+    private var retroTimer: Timer?
+    private var isGeneratingRetro = false
     private var profileCancellable: AnyCancellable?
     private var tokenHistory: [(date: Date, tokens: Int)] = []
 
@@ -34,7 +40,47 @@ final class AppState: ObservableObject {
         self.parser = JSONLParser()
         observeProfileChanges()
         ClaudeCodeHUDConnector.shared.autoRegisterOnFirstLaunch()
+        setupRetroSchedule()
         Task { await self.boot(profile: profile) }
+    }
+
+    // MARK: - 회고 자동 생성 스케줄
+
+    private func setupRetroSchedule() {
+        if let fs = featureStore, let rs = retroReportStore {
+            let runner = ClaudeHeadlessRunner(runner: ProcessCommandRunner())
+            retroEngine = RetrospectiveEngine(featureStore: fs, reportStore: rs,
+                                              generate: { try runner.run(prompt: $0, timeout: 180) })
+        }
+        RetroNotifier.shared.requestAuthorization()
+        // 부팅 직후 1회 + 30분마다 점검 (앱이 꺼져 놓친 주기를 다음 실행 때 따라잡음)
+        retroTimer = Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.checkRetroSchedule() }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) { [weak self] in self?.checkRetroSchedule() }
+    }
+
+    /// 주기가 도래했으면 회고를 생성·저장하고 (설정 시) 알림한다.
+    func checkRetroSchedule() {
+        guard !isGeneratingRetro,
+              let engine = retroEngine, let store = retroReportStore else { return }
+        let interval = UsageLimits.shared.retroInterval
+        guard let period = interval.period else { return }   // off
+        let last = try? store.latest()?.generatedAt
+        guard RetrospectiveScheduler.isDue(interval: interval, lastGeneratedAt: last ?? nil, now: Date())
+        else { return }
+
+        isGeneratingRetro = true
+        let notify = UsageLimits.shared.retroNotify
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let report = try? engine.generate(period: period)
+            DispatchQueue.main.async {
+                self?.isGeneratingRetro = false
+                if let report, notify {
+                    RetroNotifier.shared.notifyNewRetrospective(periodLabel: report.periodLabel)
+                }
+            }
+        }
     }
 
     private func observeProfileChanges() {

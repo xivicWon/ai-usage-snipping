@@ -1,0 +1,36 @@
+// ClaudeMonitor/Data/RetroNotifier.swift
+import Foundation
+import UserNotifications
+
+/// 새 회고 생성 시 macOS 알림(포인터)을 발송한다. 내용은 담지 않고 CM 으로 유도.
+final class RetroNotifier {
+    static let shared = RetroNotifier()
+    static let deeplinkKey = "cm.deeplink"
+    static let deeplinkRetro = "retro"
+
+    private init() {}
+
+    /// 최초 1회 권한 요청.
+    func requestAuthorization() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    /// "새 회고가 생성되었습니다" 배너 — 클릭 시 회고 탭으로 딥링크.
+    func notifyNewRetrospective(periodLabel: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "새 회고가 생성되었습니다"
+        content.body = "\(periodLabel) 사용패턴 회고 — 대시보드에서 확인하세요"
+        content.sound = .default
+        content.userInfo = [Self.deeplinkKey: Self.deeplinkRetro]
+        let req = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(req)
+    }
+}
+
+/// 딥링크로 대시보드가 특정 탭을 열도록 요청하는 공유 라우터.
+final class DashboardRouter: ObservableObject {
+    static let shared = DashboardRouter()
+    /// 대시보드가 감시하다가 값이 오면 해당 탭으로 전환하고 nil 로 되돌린다.
+    @Published var requestedTool: String?
+    private init() {}
+}

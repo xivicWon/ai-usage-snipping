@@ -12,6 +12,8 @@ struct SettingsView: View {
                 .tabItem { Label("Claude", systemImage: "sparkle") }
             codexTab
                 .tabItem { Label("Codex", systemImage: "terminal") }
+            retroTab
+                .tabItem { Label("회고", systemImage: "sparkles") }
         }
         .frame(width: 480, height: 520)
         .padding()
@@ -116,6 +118,42 @@ struct SettingsView: View {
         f.allowsFloats = false
         return f
     }()
+
+    // MARK: - 회고 tab
+
+    private var retroTab: some View {
+        Form {
+            Section {
+                Picker("발송 주기", selection: $limits.retroInterval) {
+                    ForEach(RetroInterval.allCases) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Toggle("새 회고 생성 시 알림", isOn: $limits.retroNotify)
+                    .disabled(limits.retroInterval == .off)
+            } header: {
+                Text("자동 생성")
+            } footer: {
+                Text("설정한 주기마다 사람 작업 세션을 분석해 사용패턴 회고를 자동 생성합니다. "
+                     + "생성·열람은 대시보드 ‘회고’ 탭에서. 알림은 새 회고가 준비되면 배너로 알려줍니다.")
+                    .foregroundStyle(.secondary).font(.caption)
+            }
+
+            Section {
+                Text(lastRetroText)
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+            } header: {
+                Text("마지막 회고")
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var lastRetroText: String {
+        guard let store = try? RetrospectiveReportStore(path: RetrospectiveReportStore.defaultPath()),
+              let last = try? store.latest() else { return "아직 생성된 회고가 없습니다." }
+        let f = DateFormatter(); f.locale = Locale(identifier: "ko_KR"); f.dateFormat = "M/d a h:mm"
+        return "\(last.periodLabel) · \(f.string(from: last.generatedAt))"
+    }
 
     // MARK: - Codex tab
 

@@ -2,6 +2,7 @@
 import SwiftUI
 import AppKit
 import Combine
+import UserNotifications
 
 @main
 struct ClaudeMonitorApp: App {
@@ -13,7 +14,7 @@ struct ClaudeMonitorApp: App {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var dashboardWindow: NSWindow?
@@ -23,6 +24,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        UNUserNotificationCenter.current().delegate = self
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem?.button {
@@ -138,6 +140,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         dashboardWindow = w
+    }
+
+    // MARK: - Notifications (회고 딥링크)
+
+    /// 앱이 떠 있을 때도 배너를 보여준다.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                               willPresent notification: UNNotification,
+                               withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
+    }
+
+    /// 알림 클릭 → 대시보드 회고 탭 열기(딥링크).
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                               didReceive response: UNNotificationResponse,
+                               withCompletionHandler completionHandler: @escaping () -> Void) {
+        let info = response.notification.request.content.userInfo
+        if info[RetroNotifier.deeplinkKey] as? String == RetroNotifier.deeplinkRetro {
+            DashboardRouter.shared.requestedTool = DashboardView.AITool.retro.rawValue
+            openDashboard()
+        }
+        completionHandler()
     }
 
     // MARK: - Status bar image

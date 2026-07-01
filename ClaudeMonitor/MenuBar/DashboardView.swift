@@ -8,6 +8,7 @@ struct DashboardView: View {
     @ObservedObject private var codexReader = CodexSessionReader.shared
 
     @State private var selectedTool: AITool = .claude
+    @ObservedObject private var router = DashboardRouter.shared
 
     enum AITool: String, CaseIterable {
         case claude = "Claude"
@@ -50,6 +51,10 @@ struct DashboardView: View {
             }
         }
         .frame(width: 760, height: 520)
+        .onReceive(router.$requestedTool.compactMap { $0 }) { raw in
+            if let tool = AITool(rawValue: raw) { selectedTool = tool }
+            router.requestedTool = nil
+        }
     }
 
     // MARK: - Session sidebar
