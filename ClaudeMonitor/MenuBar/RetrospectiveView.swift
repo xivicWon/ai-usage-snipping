@@ -1,8 +1,10 @@
 // ClaudeMonitor/MenuBar/RetrospectiveView.swift
 import SwiftUI
+import AppKit
 
 struct RetrospectiveView: View {
     @StateObject private var vm = RetrospectiveViewModel()
+    @State private var didCopy = false
 
     var body: some View {
         HSplitView {
@@ -43,7 +45,14 @@ struct RetrospectiveView: View {
     private func historyRow(_ r: RetrospectiveReport) -> some View {
         let isSel = vm.selected?.id == r.id
         return VStack(alignment: .leading, spacing: 2) {
-            Text(r.periodLabel).font(.system(size: 12, weight: .medium))
+            HStack(spacing: 4) {
+                if r.style == .roast {
+                    Text("갱생").font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.red).padding(.horizontal, 4).padding(.vertical, 1)
+                        .background(Color.red.opacity(0.12)).clipShape(Capsule())
+                }
+                Text(r.periodLabel).font(.system(size: 12, weight: .medium))
+            }
             Text(Self.dateFmt.string(from: r.generatedAt))
                 .font(.system(size: 10)).foregroundStyle(.secondary)
         }
@@ -62,7 +71,12 @@ struct RetrospectiveView: View {
                 Picker("", selection: $vm.period) {
                     ForEach(RetroPeriod.allCases) { Text($0.label).tag($0) }
                 }
-                .pickerStyle(.menu).frame(width: 130).disabled(vm.isGenerating)
+                .pickerStyle(.menu).frame(width: 110).disabled(vm.isGenerating)
+
+                Picker("", selection: $vm.style) {
+                    ForEach(RetroStyle.allCases) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.menu).frame(width: 110).disabled(vm.isGenerating)
 
                 Button {
                     vm.generateNow()
@@ -75,6 +89,13 @@ struct RetrospectiveView: View {
                 }
                 .disabled(vm.isGenerating || !vm.isAvailable)
                 Spacer()
+
+                Button {
+                    copySelected()
+                } label: {
+                    Label(didCopy ? "복사됨" : "복사", systemImage: didCopy ? "checkmark" : "doc.on.doc")
+                }
+                .disabled(vm.selected == nil)
             }
             .padding(.horizontal, 16).padding(.vertical, 10)
             Divider()
@@ -88,7 +109,7 @@ struct RetrospectiveView: View {
             if let report = vm.selected {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("\(report.periodLabel) · \(Self.dateFmt.string(from: report.generatedAt))")
+                        Text("\(report.style.label) · \(report.periodLabel) · \(Self.dateFmt.string(from: report.generatedAt))")
                             .font(.system(size: 10)).foregroundStyle(.tertiary)
                         MarkdownText(report.body)
                     }
@@ -107,6 +128,15 @@ struct RetrospectiveView: View {
                 Spacer()
             }
         }
+    }
+
+    /// 선택된 회고 본문을 클립보드로 복사.
+    private func copySelected() {
+        guard let body = vm.selected?.body else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(body, forType: .string)
+        didCopy = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { didCopy = false }
     }
 
     private static let dateFmt: DateFormatter = {

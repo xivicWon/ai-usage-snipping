@@ -7,6 +7,7 @@ final class RetrospectiveViewModel: ObservableObject {
     @Published var reports: [RetrospectiveReport] = []
     @Published var selected: RetrospectiveReport?
     @Published var period: RetroPeriod = .week
+    @Published var style: RetroStyle = .standard
     @Published var isGenerating = false
     @Published var errorMessage: String?
 
@@ -40,9 +41,10 @@ final class RetrospectiveViewModel: ObservableObject {
         isGenerating = true
         errorMessage = nil
         let period = self.period
+        let style = self.style
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             do {
-                let report = try engine.generate(period: period)
+                let report = try engine.generate(period: period, style: style)
                 DispatchQueue.main.async {
                     guard let self else { return }
                     self.isGenerating = false

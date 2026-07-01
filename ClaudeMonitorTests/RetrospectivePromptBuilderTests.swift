@@ -42,4 +42,31 @@ final class RetrospectivePromptBuilderTests: XCTestCase {
     func test_requests_korean_output() {
         XCTAssertTrue(build().contains("한국어"))
     }
+
+    // MARK: - 갱생 회고 (roast)
+
+    private func buildRoast() -> String {
+        RetrospectivePromptBuilder.build(summary: summary, periodLabel: "최근 7일", style: .roast)
+    }
+
+    func test_roast_style_uses_roast_instruction() {
+        let p = buildRoast()
+        XCTAssertTrue(p.contains("roast me violently harsh"))
+        XCTAssertTrue(p.contains("한국어로 대답"))
+    }
+
+    func test_roast_style_still_includes_real_stats() {
+        let p = buildRoast()
+        XCTAssertTrue(p.contains("67"))          // 세션 수 근거
+        XCTAssertTrue(p.contains("withRocky"))   // 프로젝트 근거
+    }
+
+    func test_roast_is_not_the_coach_prompt() {
+        XCTAssertFalse(buildRoast().contains("코치"))
+    }
+
+    func test_style_labels() {
+        XCTAssertEqual(RetroStyle.standard.label, "기본 회고")
+        XCTAssertEqual(RetroStyle.roast.label, "갱생 회고")
+    }
 }

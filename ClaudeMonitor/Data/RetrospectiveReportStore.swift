@@ -33,6 +33,11 @@ final class RetrospectiveReportStore {
                 t.column("botSessions", .integer).notNull()
             }
         }
+        m.registerMigration("v2_style") { db in
+            try db.alter(table: "retrospectiveReport") { t in
+                t.add(column: "style", .text).notNull().defaults(to: RetroStyle.standard.rawValue)
+            }
+        }
         try m.migrate(dbQueue)
     }
 
@@ -42,10 +47,10 @@ final class RetrospectiveReportStore {
         try dbQueue.write { db in
             try db.execute(sql: """
                 INSERT OR REPLACE INTO retrospectiveReport
-                  (id, periodLabel, "from", "to", generatedAt, body, humanSessions, botSessions)
-                VALUES (?,?,?,?,?,?,?,?)
+                  (id, periodLabel, "from", "to", generatedAt, body, humanSessions, botSessions, style)
+                VALUES (?,?,?,?,?,?,?,?,?)
                 """, arguments: [r.id, r.periodLabel, r.from, r.to, r.generatedAt, r.body,
-                                 r.humanSessions, r.botSessions])
+                                 r.humanSessions, r.botSessions, r.style.rawValue])
         }
     }
 
@@ -69,7 +74,8 @@ final class RetrospectiveReportStore {
         RetrospectiveReport(
             id: row["id"], periodLabel: row["periodLabel"],
             from: row["from"], to: row["to"], generatedAt: row["generatedAt"],
-            body: row["body"], humanSessions: row["humanSessions"], botSessions: row["botSessions"]
+            body: row["body"], humanSessions: row["humanSessions"], botSessions: row["botSessions"],
+            style: RetroStyle(rawValue: row["style"]) ?? .standard
         )
     }
 }
