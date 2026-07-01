@@ -1,5 +1,6 @@
 // ClaudeMonitor/Data/ClaudeCodeHUDConnector.swift
 import Foundation
+import Combine
 
 /// 현재 사용량 연결이 어느 단계(tier)에 해당하는지 — 설정 UI 가 단계별 적용 버튼을
 /// 보여주는 데 사용한다.
@@ -134,12 +135,18 @@ final class ClaudeCodeHUDConnector: ObservableObject {
 
     private let ourCommandMarker = ".claudemonitor/hud.sh"
     private var dirWatcher: DispatchSourceFileSystemObject?
+    private var updateCancellable: AnyCancellable?
 
     private init() {
         checkStatus()
         healIfRegistered()             // 운영중 self-heal: 망가진 항목이면 조용히 복구
         refreshScriptsIfRegistered()   // 앱 업데이트 시 최신 hud.sh/렌더러/스타일 반영
         startWatchingDir()
+        // 업데이트 감지되면 opts 를 다시 써 HUD 의 CM 버전에 * 반영
+        updateCancellable = UpdateChecker.shared.$updateAvailable
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in try? self?.writeOptsFile() }
     }
 
     /// 등록된 상태라면 on-disk 스크립트를 현재 앱 버전으로 다시 쓴다(렌더러 갱신 등).
@@ -336,6 +343,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         const fieldColors = (opt.fieldColors && typeof opt.fieldColors === 'object') ? opt.fieldColors : {};
         const fieldOrder  = (opt.fieldOrder  && typeof opt.fieldOrder  === 'object') ? opt.fieldOrder  : {};
         const appVersion = (typeof opt.appVersion === 'string') ? opt.appVersion : '';
+        const appUpdate = !!opt.appUpdate;
 
         // 색상 이름 → [bg, fg, tint] (ANSI 256)
         // bg: 채움 모드 배경(어두운 톤), fg: 그 배경 위 글자색(대비), tint: 비채움 모드 글자색(선명한 톤)
@@ -425,7 +433,7 @@ final class ClaudeCodeHUDConnector: ObservableObject {
         const add = (key, e, text, bg, fg, tint) => { parts[key] = { emoji: e, text, bg, fg, tint }; };
 
         add('ver', '🔹', 'CC ' + (d.version || ''), 24, 159, 39);
-        if (appVersion) add('appver', '🏷', 'CM ' + appVersion, 60, 200, 180);
+        if (appVersion) add('appver', '🏷', 'CM ' + appVersion + (appUpdate ? '*' : ''), 60, 200, 180);
         const model = (d.model && (d.model.display_name || d.model.id)) || '';
         if (model) {
           // auto: 모델명에 따라 색상 자동 지정 (opus=주황, sonnet=파랑, haiku=초록, fable=자홍)
@@ -618,7 +626,8 @@ final class ClaudeCodeHUDConnector: ObservableObject {
             "fieldRows": hudFieldRows,
             "fieldColors": hudFieldColors,
             "fieldOrder": hudFieldOrder,
-            "appVersion": ClaudeCodeHUDConnector.appVersion  // 렌더러가 모르는 앱 버전을 주입
+            "appVersion": ClaudeCodeHUDConnector.appVersion,  // 렌더러가 모르는 앱 버전을 주입
+            "appUpdate": UpdateChecker.shared.updateAvailable // 새 버전 있으면 CM 뒤에 * 표시
         ]
         let data = try JSONSerialization.data(withJSONObject: opts, options: [.prettyPrinted, .sortedKeys])
         try data.write(to: hudOptsPath, options: .atomic)
