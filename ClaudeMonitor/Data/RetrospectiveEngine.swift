@@ -43,14 +43,14 @@ final class RetrospectiveEngine {
 
     /// 회고를 생성·저장하고 반환한다. 활동 없으면 noActivity, 생성 실패면 generationFailed.
     @discardableResult
-    func generate(period: RetroPeriod) throws -> RetrospectiveReport {
+    func generate(period: RetroPeriod, style: RetroStyle = .standard) throws -> RetrospectiveReport {
         let nowDate = now()
         let (from, to) = period.range(now: nowDate)
         let features = (try? featureStore.features(from: from, to: to)) ?? []
         let summary = RetrospectiveAggregator.summarize(features)
         guard summary.humanSessions > 0 else { throw GenerateError.noActivity }
 
-        let prompt = RetrospectivePromptBuilder.build(summary: summary, periodLabel: period.label)
+        let prompt = RetrospectivePromptBuilder.build(summary: summary, periodLabel: period.label, style: style)
         let body: String
         do {
             body = try generate(prompt)
@@ -63,7 +63,8 @@ final class RetrospectiveEngine {
         let report = RetrospectiveReport(
             id: makeId(), periodLabel: period.label, from: from, to: to,
             generatedAt: nowDate, body: body,
-            humanSessions: summary.humanSessions, botSessions: summary.botSessions)
+            humanSessions: summary.humanSessions, botSessions: summary.botSessions,
+            style: style)
         try reportStore.save(report)
         return report
     }

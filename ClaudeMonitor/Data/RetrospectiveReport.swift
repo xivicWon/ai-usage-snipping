@@ -11,4 +11,5 @@ struct RetrospectiveReport: Equatable, Identifiable {
     var body: String             // 마크다운
     var humanSessions: Int       // 근거 스냅샷
     var botSessions: Int
+    var style: RetroStyle = .standard   // 회고 유형 (기본/갱생)
 }

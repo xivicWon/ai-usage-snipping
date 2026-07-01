@@ -43,7 +43,14 @@ struct RetrospectiveView: View {
     private func historyRow(_ r: RetrospectiveReport) -> some View {
         let isSel = vm.selected?.id == r.id
         return VStack(alignment: .leading, spacing: 2) {
-            Text(r.periodLabel).font(.system(size: 12, weight: .medium))
+            HStack(spacing: 4) {
+                if r.style == .roast {
+                    Text("갱생").font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.red).padding(.horizontal, 4).padding(.vertical, 1)
+                        .background(Color.red.opacity(0.12)).clipShape(Capsule())
+                }
+                Text(r.periodLabel).font(.system(size: 12, weight: .medium))
+            }
             Text(Self.dateFmt.string(from: r.generatedAt))
                 .font(.system(size: 10)).foregroundStyle(.secondary)
         }
@@ -62,7 +69,12 @@ struct RetrospectiveView: View {
                 Picker("", selection: $vm.period) {
                     ForEach(RetroPeriod.allCases) { Text($0.label).tag($0) }
                 }
-                .pickerStyle(.menu).frame(width: 130).disabled(vm.isGenerating)
+                .pickerStyle(.menu).frame(width: 110).disabled(vm.isGenerating)
+
+                Picker("", selection: $vm.style) {
+                    ForEach(RetroStyle.allCases) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.menu).frame(width: 110).disabled(vm.isGenerating)
 
                 Button {
                     vm.generateNow()
@@ -88,7 +100,7 @@ struct RetrospectiveView: View {
             if let report = vm.selected {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("\(report.periodLabel) · \(Self.dateFmt.string(from: report.generatedAt))")
+                        Text("\(report.style.label) · \(report.periodLabel) · \(Self.dateFmt.string(from: report.generatedAt))")
                             .font(.system(size: 10)).foregroundStyle(.tertiary)
                         MarkdownText(report.body)
                     }
