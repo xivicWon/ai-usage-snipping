@@ -22,6 +22,8 @@
 		4DFDE11293FBE677ACD2C926 /* BotSessionClassifierTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB8BCCE92306B6FA03F6E4AB /* BotSessionClassifierTests.swift */; };
 		638D4DA0DB04EF50100273BE /* ClaudeCodeHUDConnector.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB8FB400CDE3295D0382D0CF /* ClaudeCodeHUDConnector.swift */; };
 		63978344E36EBB5FFC03C146 /* RetrospectivePromptBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7585350EA6844232DA1BEA3 /* RetrospectivePromptBuilderTests.swift */; };
+		658E313F7FD195FB53EDFB00 /* RetroNotifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 402D817A2DD5A2C34ADECD24 /* RetroNotifier.swift */; };
+		858232669F190B40FC2CCCEC /* RetrospectiveSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9E38F583347A1D5C1D01645 /* RetrospectiveSchedulerTests.swift */; };
 		8F35C441DCCA14BD08758C9C /* RetrospectiveEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 63D8F731B6DF73A544816B1B /* RetrospectiveEngine.swift */; };
 		92C8780A17067BCFE01176A1 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A46DDDAE35FBBC7D8F01BA11 /* AppState.swift */; };
 		967F865814427F5FCE0C40D4 /* RetrospectiveEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8142C6242F5DD8F11B24413 /* RetrospectiveEngineTests.swift */; };
@@ -42,6 +44,7 @@
 		D7FCD950BF90744E8DF2CB3E /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 4FCF28A9277A18AC8034DE93 /* GRDB */; };
 		E3267FFAFDCD3C4CA3FFD561 /* ClaudeHeadlessRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3142E5418461FBBEBE15F46B /* ClaudeHeadlessRunner.swift */; };
 		EE444503D734F96F52156E01 /* ClaudeSessionFeatureParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CCDCFC0B66516097C5FDAF8 /* ClaudeSessionFeatureParserTests.swift */; };
+		EF4AF0CED2E3EFC730BFBD33 /* RetrospectiveScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45A9662DFD76DC63F9473658 /* RetrospectiveScheduler.swift */; };
 		F050D6199EA08714A355A510 /* JSONLParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31C17EE3254080CBA8B0DD22 /* JSONLParserTests.swift */; };
 		F30ACF9B546AED5A12FCBC12 /* SessionFeatures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A12671792E480FCCA7307993 /* SessionFeatures.swift */; };
 		F5D62BD9EF78AAE398B3455A /* RetrospectiveAggregatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 084CD0C199D5FAEF700CEE1B /* RetrospectiveAggregatorTests.swift */; };
@@ -74,7 +77,9 @@
 		3142E5418461FBBEBE15F46B /* ClaudeHeadlessRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeHeadlessRunner.swift; sourceTree = "<group>"; };
 		31C17EE3254080CBA8B0DD22 /* JSONLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONLParserTests.swift; sourceTree = "<group>"; };
 		3A91F0901084F93E511243C6 /* ClaudeSessionFeatureParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSessionFeatureParser.swift; sourceTree = "<group>"; };
+		402D817A2DD5A2C34ADECD24 /* RetroNotifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetroNotifier.swift; sourceTree = "<group>"; };
 		4469D891E613EDB1F561ADD4 /* PricingTableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingTableTests.swift; sourceTree = "<group>"; };
+		45A9662DFD76DC63F9473658 /* RetrospectiveScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveScheduler.swift; sourceTree = "<group>"; };
 		4CCDCFC0B66516097C5FDAF8 /* ClaudeSessionFeatureParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSessionFeatureParserTests.swift; sourceTree = "<group>"; };
 		586053C67C6E14B7D97EF938 /* SessionReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionReader.swift; sourceTree = "<group>"; };
 		63D8F731B6DF73A544816B1B /* RetrospectiveEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveEngine.swift; sourceTree = "<group>"; };
@@ -93,6 +98,7 @@
 		AB8FB400CDE3295D0382D0CF /* ClaudeCodeHUDConnector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeCodeHUDConnector.swift; sourceTree = "<group>"; };
 		AC1A59A342834B6B14EFCCA0 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		B7585350EA6844232DA1BEA3 /* RetrospectivePromptBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectivePromptBuilderTests.swift; sourceTree = "<group>"; };
+		B9E38F583347A1D5C1D01645 /* RetrospectiveSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveSchedulerTests.swift; sourceTree = "<group>"; };
 		C63F6ECC4BF4BF357CBF7000 /* SQLiteStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteStore.swift; sourceTree = "<group>"; };
 		CA841D32A589448C06EA74DD /* BotSessionClassifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BotSessionClassifier.swift; sourceTree = "<group>"; };
 		CC030377CF76169788DC1BEE /* RetrospectiveReportStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RetrospectiveReportStore.swift; sourceTree = "<group>"; };
@@ -160,6 +166,7 @@
 				E8142C6242F5DD8F11B24413 /* RetrospectiveEngineTests.swift */,
 				B7585350EA6844232DA1BEA3 /* RetrospectivePromptBuilderTests.swift */,
 				F2A8F771FF134F28C220C81E /* RetrospectiveReportStoreTests.swift */,
+				B9E38F583347A1D5C1D01645 /* RetrospectiveSchedulerTests.swift */,
 				2D35FF9BC7516C3572294BFC /* SessionFeatureStoreTests.swift */,
 				93B2B74891DC2F648F916252 /* SQLiteStoreTests.swift */,
 			);
@@ -209,11 +216,13 @@
 				13DDDF5B01814C7620139479 /* JSONLParser.swift */,
 				F4F0139049AB7029E72F1BEB /* PricingTable.swift */,
 				89C0E4BF6F1F6264DC49831F /* ProfileStore.swift */,
+				402D817A2DD5A2C34ADECD24 /* RetroNotifier.swift */,
 				0A8857B39997F082124EDCA0 /* RetrospectiveAggregator.swift */,
 				63D8F731B6DF73A544816B1B /* RetrospectiveEngine.swift */,
 				2FFD67AC2873B411076E081F /* RetrospectivePromptBuilder.swift */,
 				A4A17B20EE921EFBB588FBB1 /* RetrospectiveReport.swift */,
 				CC030377CF76169788DC1BEE /* RetrospectiveReportStore.swift */,
+				45A9662DFD76DC63F9473658 /* RetrospectiveScheduler.swift */,
 				A12671792E480FCCA7307993 /* SessionFeatures.swift */,
 				26D1B78F337F58BAE3199BAF /* SessionFeatureStore.swift */,
 				586053C67C6E14B7D97EF938 /* SessionReader.swift */,
@@ -314,6 +323,7 @@
 				967F865814427F5FCE0C40D4 /* RetrospectiveEngineTests.swift in Sources */,
 				63978344E36EBB5FFC03C146 /* RetrospectivePromptBuilderTests.swift in Sources */,
 				A319210622A1BAD45DB17BAD /* RetrospectiveReportStoreTests.swift in Sources */,
+				858232669F190B40FC2CCCEC /* RetrospectiveSchedulerTests.swift in Sources */,
 				BAD2E0F543A769F0F59DE8E6 /* SQLiteStoreTests.swift in Sources */,
 				C924BFB61106D1F4BA805E05 /* SessionFeatureStoreTests.swift in Sources */,
 			);
@@ -337,11 +347,13 @@
 				A3670779B5D381B44B9E16BF /* MenuBarView.swift in Sources */,
 				D743E3A9C1423A9EC1802B88 /* PricingTable.swift in Sources */,
 				C0B70CF38A6A0AA853808F58 /* ProfileStore.swift in Sources */,
+				658E313F7FD195FB53EDFB00 /* RetroNotifier.swift in Sources */,
 				33144E350059B3E5334C8E29 /* RetrospectiveAggregator.swift in Sources */,
 				8F35C441DCCA14BD08758C9C /* RetrospectiveEngine.swift in Sources */,
 				FEEF00A601831B9BE64C9ADE /* RetrospectivePromptBuilder.swift in Sources */,
 				CF12AEC429CD86501C4FC299 /* RetrospectiveReport.swift in Sources */,
 				350CFF2DDF35A33EE9BACDB1 /* RetrospectiveReportStore.swift in Sources */,
+				EF4AF0CED2E3EFC730BFBD33 /* RetrospectiveScheduler.swift in Sources */,
 				A6EED3504E8E754916AFC729 /* RetrospectiveView.swift in Sources */,
 				44AAC9574100C1C7C1CBA59A /* RetrospectiveViewModel.swift in Sources */,
 				471A70E61BD360EA52BE5BC4 /* SQLiteStore.swift in Sources */,

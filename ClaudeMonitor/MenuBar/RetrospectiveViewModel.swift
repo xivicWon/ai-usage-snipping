@@ -48,6 +48,7 @@ final class RetrospectiveViewModel: ObservableObject {
                     self.isGenerating = false
                     self.loadHistory()
                     self.selected = report
+                    RetroBadge.shared.markSeen()   // 방금 만든 걸 보고 있으니 확인 처리
                 }
             } catch {
                 let msg: String

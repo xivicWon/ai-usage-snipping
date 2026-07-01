@@ -9,6 +9,7 @@ struct RetrospectiveView: View {
             historySidebar.frame(minWidth: 170, maxWidth: 210)
             detail
         }
+        .onAppear { RetroBadge.shared.markSeen() }
     }
 
     // MARK: - History sidebar

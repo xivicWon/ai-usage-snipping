@@ -2,6 +2,7 @@
 import SwiftUI
 import AppKit
 import Combine
+import UserNotifications
 
 @main
 struct ClaudeMonitorApp: App {
@@ -13,16 +14,22 @@ struct ClaudeMonitorApp: App {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
     private var dashboardWindow: NSWindow?
     private var settingsWindow: NSWindow?
     private let appState = AppState()
     private var cancellable: AnyCancellable?
+    private var badgeCancellable: AnyCancellable?
+    // 상태바 렌더 입력 (사용량 신호가 갱신될 때 저장 → 배지 변경 시에도 재렌더)
+    private var statusClaudeRemaining: Double?
+    private var statusCodexPct: Double?
+    private var statusRateLevel: Int = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        UNUserNotificationCenter.current().delegate = self
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem?.button {
@@ -63,25 +70,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let (usage, codexUsedPct) = combined1
 
                 // 토글이 꺼진 쪽은 아이콘에서도 숨긴다
-                let claudeRemaining: Double? = claudeEnabled ? usage?.fiveHourRemaining : nil
-                let codexPct: Double? = (codexEnabled && codexConnected) ? codexUsedPct : nil
-
-                guard let button = self.statusItem?.button else { return }
-
-                if claudeRemaining != nil || codexPct != nil {
-                    button.image = Self.makeStatusBarImage(
-                        claudeRemaining: claudeRemaining,
-                        codexUsedPercent: codexPct,
-                        claudeRateLevel: rateLevel
-                    )
-                    button.imagePosition = .imageOnly
-                    button.title = ""
-                } else {
-                    button.image = Self.makeClaudeIcon()
-                    button.imagePosition = .imageLeft
-                    button.title = " --"
-                }
+                self.statusClaudeRemaining = claudeEnabled ? usage?.fiveHourRemaining : nil
+                self.statusCodexPct = (codexEnabled && codexConnected) ? codexUsedPct : nil
+                self.statusRateLevel = rateLevel
+                self.renderStatusBar()
             }
+
+        // 새 회고 미확인 배지 → 아이콘에 점 표시
+        badgeCancellable = RetroBadge.shared.$hasUnseen
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.renderStatusBar() }
+    }
+
+    /// 저장된 사용량 값 + 회고 배지 상태로 상태바 아이콘을 그린다.
+    private func renderStatusBar() {
+        guard let button = statusItem?.button else { return }
+        let badge = RetroBadge.shared.hasUnseen
+        if statusClaudeRemaining != nil || statusCodexPct != nil {
+            let base = Self.makeStatusBarImage(
+                claudeRemaining: statusClaudeRemaining,
+                codexUsedPercent: statusCodexPct,
+                claudeRateLevel: statusRateLevel)
+            button.image = badge ? Self.withRetroDot(base) : base
+            button.imagePosition = .imageOnly
+            button.title = ""
+        } else {
+            let base = Self.makeClaudeIcon()
+            button.image = badge ? Self.withRetroDot(base) : base
+            button.imagePosition = .imageLeft
+            button.title = " --"
+        }
+    }
+
+    /// 아이콘 우상단에 초록 점을 합성한다 (미확인 회고 표시).
+    private static func withRetroDot(_ base: NSImage) -> NSImage {
+        let size = base.size
+        let img = NSImage(size: size)
+        img.lockFocus()
+        base.draw(in: NSRect(origin: .zero, size: size),
+                  from: .zero, operation: .sourceOver, fraction: 1.0)
+        let d: CGFloat = 5
+        let rect = NSRect(x: size.width - d - 0.5, y: size.height - d - 0.5, width: d, height: d)
+        NSColor.systemGreen.setFill()
+        NSBezierPath(ovalIn: rect).fill()
+        img.unlockFocus()
+        img.isTemplate = false   // 초록 점 유지 (템플릿 틴트 방지)
+        return img
     }
 
     @objc private func togglePopover() {
@@ -138,6 +172,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         w.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         dashboardWindow = w
+    }
+
+    // MARK: - Notifications (회고 딥링크)
+
+    /// 앱이 떠 있을 때도 배너를 보여준다.
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                               willPresent notification: UNNotification,
+                               withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound])
+    }
+
+    /// 알림 클릭 → 대시보드 회고 탭 열기(딥링크).
+    func userNotificationCenter(_ center: UNUserNotificationCenter,
+                               didReceive response: UNNotificationResponse,
+                               withCompletionHandler completionHandler: @escaping () -> Void) {
+        let info = response.notification.request.content.userInfo
+        if info[RetroNotifier.deeplinkKey] as? String == RetroNotifier.deeplinkRetro {
+            DashboardRouter.shared.requestedTool = DashboardView.AITool.retro.rawValue
+            openDashboard()
+        }
+        completionHandler()
     }
 
     // MARK: - Status bar image
