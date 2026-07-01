@@ -57,6 +57,12 @@ struct ProcessCommandRunner: CommandRunning {
         proc.executableURL = URL(fileURLWithPath: executable)
         proc.arguments = args
 
+        // 작업 디렉터리를 우리 전용 폴더로 고정 — claude -p 가 cwd 기준으로 사용자
+        // 폴더(Downloads/Documents 등)를 탐색해 권한 프롬프트를 유발하지 않도록 격리.
+        let workDir = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".claudemonitor")
+        try? FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
+        proc.currentDirectoryURL = workDir
+
         let outPipe = Pipe(); proc.standardOutput = outPipe; proc.standardError = outPipe
         let inPipe = Pipe(); proc.standardInput = inPipe
 
