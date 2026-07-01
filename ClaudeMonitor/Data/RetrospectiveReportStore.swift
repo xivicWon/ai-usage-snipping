@@ -70,6 +70,15 @@ final class RetrospectiveReportStore {
         }
     }
 
+    func count() throws -> Int {
+        try dbQueue.read { db in try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM retrospectiveReport") ?? 0 }
+    }
+
+    /// 저장된 회고를 전부 삭제한다.
+    func deleteAll() throws {
+        try dbQueue.write { db in try db.execute(sql: "DELETE FROM retrospectiveReport") }
+    }
+
     private static func decode(_ row: Row) -> RetrospectiveReport {
         RetrospectiveReport(
             id: row["id"], periodLabel: row["periodLabel"],

@@ -21,6 +21,14 @@ final class SessionFeatureStoreTests: XCTestCase {
         )
     }
 
+    func test_deleteAll_clears_store() throws {
+        try sut.upsert(make(id: "a", started: day))
+        try sut.upsert(make(id: "b", started: day))
+        XCTAssertEqual(try sut.count(), 2)
+        try sut.deleteAll()
+        XCTAssertEqual(try sut.count(), 0)
+    }
+
     func test_isBot_flag_roundtrips() throws {
         try sut.upsert(make(id: "BOT", started: day, isBot: true))
         let got = try sut.features(from: day.addingTimeInterval(-60), to: day.addingTimeInterval(60)).first

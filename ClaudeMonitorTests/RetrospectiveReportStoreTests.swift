@@ -40,6 +40,20 @@ final class RetrospectiveReportStoreTests: XCTestCase {
         XCTAssertEqual(try sut.all().map(\.id), ["new", "old"])
     }
 
+    func test_count_reflects_saved() throws {
+        XCTAssertEqual(try sut.count(), 0)
+        try sut.save(report("a", gen: t0))
+        try sut.save(report("b", gen: t0.addingTimeInterval(60)))
+        XCTAssertEqual(try sut.count(), 2)
+    }
+
+    func test_deleteAll_clears() throws {
+        try sut.save(report("a", gen: t0))
+        try sut.deleteAll()
+        XCTAssertEqual(try sut.count(), 0)
+        XCTAssertNil(try sut.latest())
+    }
+
     func test_save_is_idempotent_by_id() throws {
         try sut.save(report("A", gen: t0, body: "first"))
         try sut.save(report("A", gen: t0, body: "second"))
