@@ -41,6 +41,7 @@ final class AppState: ObservableObject {
         observeProfileChanges()
         ClaudeCodeHUDConnector.shared.autoRegisterOnFirstLaunch()
         setupRetroSchedule()
+        UpdateChecker.shared.check()   // 새 버전 확인
         Task { await self.boot(profile: profile) }
     }
 

@@ -93,6 +93,7 @@ struct MenuBarView: View {
     @ObservedObject private var codexReader = CodexSessionReader.shared
     @ObservedObject private var limits     = UsageLimits.shared
     @ObservedObject private var badge      = RetroBadge.shared
+    @ObservedObject private var updater    = UpdateChecker.shared
     let openDashboard: () -> Void
     let openSettings: () -> Void
 
@@ -355,6 +356,12 @@ struct MenuBarView: View {
 
     private var menuButtons: some View {
         VStack(spacing: 0) {
+            if updater.updateAvailable, let latest = updater.latestVersion {
+                MenuItemRow(label: "업데이트 있음 · v\(latest)", icon: "arrow.down.circle") {
+                    NSWorkspace.shared.open(UpdateChecker.repoURL)
+                }
+                Divider()
+            }
             retroRow
             Divider()
             MenuItemRow(label: "대시보드 열기", icon: "chart.bar") { openDashboard() }
