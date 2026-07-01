@@ -21,6 +21,8 @@ struct SettingsView: View {
                 .tabItem { Label("Codex", systemImage: "terminal") }
             retroTab
                 .tabItem { Label("회고", systemImage: "sparkles") }
+            newsTab
+                .tabItem { Label("뉴스", systemImage: "newspaper") }
         }
         .frame(width: 480, height: 520)
         .padding()
@@ -201,6 +203,64 @@ struct SettingsView: View {
         let attrs = try? FileManager.default.attributesOfItem(atPath: path)
         let bytes = (attrs?[.size] as? Int) ?? 0
         return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+    }
+
+    // MARK: - 뉴스 tab
+
+    @State private var newsCount = 0
+    @State private var newsSize = "–"
+    @State private var confirmClearNews = false
+
+    private var newsTab: some View {
+        Form {
+            Section {
+                Picker("생성 주기", selection: $limits.newsInterval) {
+                    ForEach(NewsInterval.allCases) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Toggle("새 뉴스 요약 생성 시 알림", isOn: $limits.newsNotify)
+                    .disabled(limits.newsInterval == .off)
+            } header: {
+                Text("자동 생성")
+            } footer: {
+                Text("설정한 주기마다 AI 뉴스 소스(RSS 등)를 수집해 핵심 3~5개 한줄요약을 자동 생성합니다. "
+                     + "생성·열람은 대시보드 ‘📰 뉴스’ 탭에서. 수집은 URLSession, 요약은 claude -p 로 처리합니다.")
+                    .foregroundStyle(.secondary).font(.caption)
+            }
+
+            Section {
+                ForEach(NewsSource.defaults) { s in
+                    LabeledContent(s.name, value: s.url)
+                        .font(.system(size: 11))
+                }
+            } header: {
+                Text("기본 소스")
+            } footer: {
+                Text("가져오지 못한 소스는 조용히 건너뜁니다.")
+                    .foregroundStyle(.secondary).font(.caption)
+            }
+
+            Section {
+                LabeledContent("저장된 다이제스트", value: "\(newsCount)건 · \(newsSize)")
+                Button("뉴스 기록 비우기", role: .destructive) { confirmClearNews = true }
+            } header: {
+                Text("저장된 데이터")
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear(perform: loadNewsStats)
+        .confirmationDialog("저장된 뉴스 다이제스트를 모두 삭제할까요? (되돌릴 수 없음)", isPresented: $confirmClearNews, titleVisibility: .visible) {
+            Button("모두 삭제", role: .destructive) {
+                try? NewsDigestStore(path: NewsDigestStore.defaultPath()).deleteAll()
+                loadNewsStats()
+            }
+            Button("취소", role: .cancel) {}
+        }
+    }
+
+    private func loadNewsStats() {
+        newsCount = (try? NewsDigestStore(path: NewsDigestStore.defaultPath()).count()) ?? 0
+        newsSize = Self.fileSize(NewsDigestStore.defaultPath())
     }
 
     // MARK: - Codex tab

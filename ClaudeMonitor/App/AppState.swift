@@ -31,6 +31,12 @@ final class AppState: ObservableObject {
     private var retroEngine: RetrospectiveEngine?
     private var retroTimer: Timer?
     private var isGeneratingRetro = false
+
+    // 뉴스 다이제스트 자동 생성 스케줄
+    private let newsDigestStore: NewsDigestStore? = try? NewsDigestStore(path: NewsDigestStore.defaultPath())
+    private var newsEngine: NewsDigestEngine?
+    private var newsTimer: Timer?
+    private var isGeneratingNews = false
     private var profileCancellable: AnyCancellable?
     private var tokenHistory: [(date: Date, tokens: Int)] = []
 
@@ -41,6 +47,7 @@ final class AppState: ObservableObject {
         observeProfileChanges()
         ClaudeCodeHUDConnector.shared.autoRegisterOnFirstLaunch()
         setupRetroSchedule()
+        setupNewsSchedule()
         UpdateChecker.shared.check()   // 새 버전 확인
         Task { await self.boot(profile: profile) }
     }
@@ -81,6 +88,49 @@ final class AppState: ObservableObject {
                     RetroBadge.shared.refresh()   // 서명 무관 배지
                     if notify {                    // OS 알림(정식 서명 시 동작)
                         RetroNotifier.shared.notifyNewRetrospective(periodLabel: report.periodLabel)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - 뉴스 다이제스트 자동 생성 스케줄
+
+    private func setupNewsSchedule() {
+        if let store = newsDigestStore {
+            let runner = ClaudeHeadlessRunner(runner: ProcessCommandRunner())
+            newsEngine = NewsDigestEngine(
+                store: store,
+                fetch: { URLSessionFeedFetcher.fetch($0) },
+                generate: { try runner.run(prompt: $0, timeout: 180) })
+        }
+        // 부팅 직후 1회 + 30분마다 점검 (앱이 꺼져 놓친 주기를 다음 실행 때 따라잡음)
+        newsTimer = Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.checkNewsSchedule() }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 90) { [weak self] in self?.checkNewsSchedule() }
+    }
+
+    /// 주기가 도래했으면 뉴스 다이제스트를 생성·저장하고 (설정 시) 알림한다.
+    func checkNewsSchedule() {
+        guard !isGeneratingNews,
+              let engine = newsEngine, let store = newsDigestStore else { return }
+        let interval = UsageLimits.shared.newsInterval
+        guard interval != .off else { return }
+        let last = try? store.latest()?.generatedAt
+        guard NewsScheduler.isDue(interval: interval, lastGeneratedAt: last ?? nil, now: Date())
+        else { return }
+
+        isGeneratingNews = true
+        let notify = UsageLimits.shared.newsNotify
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let digest = try? engine.generate()
+            DispatchQueue.main.async {
+                self?.isGeneratingNews = false
+                if digest != nil {
+                    NewsBadge.shared.refresh()   // 서명 무관 배지
+                    if notify {                   // OS 알림(정식 서명 시 동작)
+                        NewsNotifier.shared.notifyNewDigest()
                     }
                 }
             }

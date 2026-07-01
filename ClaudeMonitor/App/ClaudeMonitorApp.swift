@@ -76,16 +76,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
                 self.renderStatusBar()
             }
 
-        // 새 회고 미확인 배지 → 아이콘에 점 표시
+        // 새 회고/뉴스 미확인 배지 → 아이콘에 점 표시
         badgeCancellable = RetroBadge.shared.$hasUnseen
+            .map { _ in () }
+            .merge(with: NewsBadge.shared.$hasUnseen.map { _ in () })
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.renderStatusBar() }
     }
 
-    /// 저장된 사용량 값 + 회고 배지 상태로 상태바 아이콘을 그린다.
+    /// 저장된 사용량 값 + 회고/뉴스 배지 상태로 상태바 아이콘을 그린다.
     private func renderStatusBar() {
         guard let button = statusItem?.button else { return }
-        let badge = RetroBadge.shared.hasUnseen
+        let badge = RetroBadge.shared.hasUnseen || NewsBadge.shared.hasUnseen
         if statusClaudeRemaining != nil || statusCodexPct != nil {
             let base = Self.makeStatusBarImage(
                 claudeRemaining: statusClaudeRemaining,
@@ -190,6 +192,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         let info = response.notification.request.content.userInfo
         if info[RetroNotifier.deeplinkKey] as? String == RetroNotifier.deeplinkRetro {
             DashboardRouter.shared.requestedTool = DashboardView.AITool.retro.rawValue
+            openDashboard()
+        } else if info[NewsNotifier.deeplinkKey] as? String == NewsNotifier.deeplinkNews {
+            DashboardRouter.shared.requestedTool = DashboardView.AITool.news.rawValue
             openDashboard()
         }
         completionHandler()

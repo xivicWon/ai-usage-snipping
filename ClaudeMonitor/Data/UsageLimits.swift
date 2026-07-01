@@ -71,6 +71,16 @@ final class UsageLimits: ObservableObject {
         didSet { defaults.set(retroNotify, forKey: "retro_notify") }
     }
 
+    // MARK: - AI 뉴스 데일리
+    /// 뉴스 다이제스트 생성 주기. 기본 끔.
+    @Published var newsInterval: NewsInterval {
+        didSet { defaults.set(newsInterval.rawValue, forKey: "news_interval") }
+    }
+    /// 새 뉴스 다이제스트 생성 시 알림 발송 여부. 기본 true.
+    @Published var newsNotify: Bool {
+        didSet { defaults.set(newsNotify, forKey: "news_notify") }
+    }
+
     private init() {
         accountEmail        = defaults.string(forKey: "account_email") ?? ""
         windowLimitTokens   = defaults.integer(forKey: "limit_window_tokens")
@@ -83,6 +93,8 @@ final class UsageLimits: ObservableObject {
         rateLevel3Min       = defaults.object(forKey: "rate_level3_min") as? Int ?? Self.defaultRateLevel3
         retroInterval       = RetroInterval(rawValue: defaults.string(forKey: "retro_interval") ?? "") ?? .off
         retroNotify         = defaults.object(forKey: "retro_notify") as? Bool ?? true
+        newsInterval        = NewsInterval(rawValue: defaults.string(forKey: "news_interval") ?? "") ?? .off
+        newsNotify          = defaults.object(forKey: "news_notify") as? Bool ?? true
     }
 
     func percentRemaining(used: Int, limit: Int) -> Double? {
