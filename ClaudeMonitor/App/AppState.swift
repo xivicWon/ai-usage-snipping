@@ -31,6 +31,14 @@ final class AppState: ObservableObject {
     private var retroEngine: RetrospectiveEngine?
     private var retroTimer: Timer?
     private var isGeneratingRetro = false
+
+    // 라이브 어드바이저 (#27) — 조건 트리거 기반 적시 조언
+    private let advisorStore: AdvisorAdviceStore? = try? AdvisorAdviceStore(path: AdvisorAdviceStore.defaultPath())
+    private var advisorEngine: LiveAdvisorEngine?
+    private var advisorTimer: Timer?
+    private var isAdvisorChecking = false
+    private var lastAdvisorCheckAt: Date?
+
     private var profileCancellable: AnyCancellable?
     private var tokenHistory: [(date: Date, tokens: Int)] = []
 
@@ -41,6 +49,7 @@ final class AppState: ObservableObject {
         observeProfileChanges()
         ClaudeCodeHUDConnector.shared.autoRegisterOnFirstLaunch()
         setupRetroSchedule()
+        setupAdvisorSchedule()
         UpdateChecker.shared.check()   // 새 버전 확인
         Task { await self.boot(profile: profile) }
     }
@@ -85,6 +94,58 @@ final class AppState: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: - 라이브 어드바이저 스케줄 (#27)
+
+    private func setupAdvisorSchedule() {
+        if let store = advisorStore {
+            let runner = ClaudeHeadlessRunner(runner: ProcessCommandRunner())
+            advisorEngine = LiveAdvisorEngine(store: store,
+                                              generate: { try runner.run(prompt: $0, timeout: 180) })
+        }
+        // 1분마다 주기 도래를 점검(설정 주기 변경을 즉시 반영). 실제 체크는 isDue 일 때만.
+        advisorTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.checkAdvisorSchedule() }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 90) { [weak self] in self?.checkAdvisorSchedule() }
+    }
+
+    /// 주기가 도래했으면 라이브 신호를 모아 감지→(트리거 시)조언 생성한다.
+    func checkAdvisorSchedule() {
+        guard !isAdvisorChecking, let engine = advisorEngine else { return }
+        let limits = UsageLimits.shared
+        guard AdvisorScheduler.isDue(enabled: limits.advisorEnabled,
+                                     intervalMinutes: limits.advisorIntervalMinutes,
+                                     lastCheckedAt: lastAdvisorCheckAt, now: Date())
+        else { return }
+
+        guard let signals = currentAdvisorSignals() else {
+            lastAdvisorCheckAt = Date()   // 세션 없음 — 다음 주기까지 대기
+            return
+        }
+
+        lastAdvisorCheckAt = Date()
+        isAdvisorChecking = true
+        let interval = limits.advisorIntervalMinutes
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let advice = engine.check(signals: signals, intervalMinutes: interval)
+            DispatchQueue.main.async {
+                self?.isAdvisorChecking = false
+                if advice != nil { AdvisorBadge.shared.refresh() }   // 서명 무관 배지
+            }
+        }
+    }
+
+    /// 현재 세션 신호(토큰 0) — 최근 세션 피처 + hud-cache 5h 소진율.
+    private func currentAdvisorSignals() -> AdvisorSignals? {
+        guard let f = try? featureStore?.latestSession() ?? nil else { return nil }
+        return AdvisorSignals(
+            totalTokens: f.totalTokens,
+            filesEditedCount: f.filesEdited.count,
+            errorCount: f.errorCount,
+            fiveHourPercentUsed: anthropicUsage.usage?.fiveHourPercentUsed
+        )
     }
 
     private func observeProfileChanges() {

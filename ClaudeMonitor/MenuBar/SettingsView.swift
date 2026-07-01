@@ -12,6 +12,10 @@ struct SettingsView: View {
     @State private var reportSize = "–"
     @State private var confirmClearFeatures = false
     @State private var confirmClearReports = false
+    // 라이브 어드바이저 데이터 현황/청소
+    @State private var adviceCount = 0
+    @State private var adviceSize = "–"
+    @State private var confirmClearAdvice = false
 
     var body: some View {
         TabView {
@@ -21,6 +25,8 @@ struct SettingsView: View {
                 .tabItem { Label("Codex", systemImage: "terminal") }
             retroTab
                 .tabItem { Label("회고", systemImage: "sparkles") }
+            advisorTab
+                .tabItem { Label("어드바이저", systemImage: "lightbulb") }
         }
         .frame(width: 480, height: 520)
         .padding()
@@ -201,6 +207,66 @@ struct SettingsView: View {
         let attrs = try? FileManager.default.attributesOfItem(atPath: path)
         let bytes = (attrs?[.size] as? Int) ?? 0
         return ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .file)
+    }
+
+    // MARK: - 어드바이저 tab (#27)
+
+    private var advisorTab: some View {
+        Form {
+            Section {
+                Toggle("라이브 어드바이저 사용", isOn: $limits.advisorEnabled)
+                Stepper(value: $limits.advisorIntervalMinutes, in: 1...120, step: 1) {
+                    LabeledContent("체크 주기", value: "\(limits.advisorIntervalMinutes)분")
+                }
+                .disabled(!limits.advisorEnabled)
+                Toggle("새 조언 시 배지 표시", isOn: $limits.advisorNotify)
+                    .disabled(!limits.advisorEnabled)
+            } header: {
+                Text("동작")
+            } footer: {
+                Text("주기마다 현재 세션 신호를 토큰 0으로 점검합니다. 문제 행동(막힘·에러 반복·한도 임박)이 "
+                     + "연속 2회 지속되면 claude -p 로 조언을 1회 생성하고, 이후 30분간 쿨다운합니다. "
+                     + "조언은 메뉴바 배지와 대시보드 ‘어드바이저’ 탭에서 확인하세요.")
+                    .foregroundStyle(.secondary).font(.caption)
+            }
+
+            Section {
+                Text(lastAdviceText)
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+            } header: {
+                Text("마지막 조언")
+            }
+
+            Section {
+                LabeledContent("저장된 조언", value: "\(adviceCount)건 · \(adviceSize)")
+                Button("조언 기록 비우기", role: .destructive) { confirmClearAdvice = true }
+            } header: {
+                Text("저장된 데이터")
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear(perform: loadAdviceStats)
+        .confirmationDialog("저장된 조언을 모두 삭제할까요? (되돌릴 수 없음)", isPresented: $confirmClearAdvice, titleVisibility: .visible) {
+            Button("모두 삭제", role: .destructive) {
+                try? AdvisorAdviceStore(path: AdvisorAdviceStore.defaultPath()).deleteAll()
+                AdvisorBadge.shared.refresh()
+                loadAdviceStats()
+            }
+            Button("취소", role: .cancel) {}
+        }
+    }
+
+    private var lastAdviceText: String {
+        guard let store = try? AdvisorAdviceStore(path: AdvisorAdviceStore.defaultPath()),
+              let last = try? store.latest() else { return "아직 생성된 조언이 없습니다." }
+        let cond = AdvisorCondition(rawValue: last.condition)?.label ?? last.condition
+        let f = DateFormatter(); f.locale = Locale(identifier: "ko_KR"); f.dateFormat = "M/d a h:mm"
+        return "\(cond) · \(f.string(from: last.generatedAt))"
+    }
+
+    private func loadAdviceStats() {
+        adviceCount = (try? AdvisorAdviceStore(path: AdvisorAdviceStore.defaultPath()).count()) ?? 0
+        adviceSize = Self.fileSize(AdvisorAdviceStore.defaultPath())
     }
 
     // MARK: - Codex tab

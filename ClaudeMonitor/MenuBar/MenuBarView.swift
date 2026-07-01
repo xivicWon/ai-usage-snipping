@@ -93,6 +93,7 @@ struct MenuBarView: View {
     @ObservedObject private var codexReader = CodexSessionReader.shared
     @ObservedObject private var limits     = UsageLimits.shared
     @ObservedObject private var badge      = RetroBadge.shared
+    @ObservedObject private var advisorBadge = AdvisorBadge.shared
     @ObservedObject private var updater    = UpdateChecker.shared
     let openDashboard: () -> Void
     let openSettings: () -> Void
@@ -364,6 +365,8 @@ struct MenuBarView: View {
             }
             retroRow
             Divider()
+            advisorRow
+            Divider()
             MenuItemRow(label: "대시보드 열기", icon: "chart.bar") { openDashboard() }
             Divider()
             MenuItemRow(label: "설정", icon: "gear") { openSettings() }
@@ -382,6 +385,19 @@ struct MenuBarView: View {
             }
             if badge.hasUnseen {
                 Circle().fill(Color.green).frame(width: 7, height: 7).padding(.trailing, 14)
+            }
+        }
+    }
+
+    /// 라이브 어드바이저 열기 — 새 조언 미확인 시 주황 점 배지.
+    private var advisorRow: some View {
+        HStack(spacing: 0) {
+            MenuItemRow(label: advisorBadge.hasUnseen ? "어드바이저  · 새 조언" : "어드바이저", icon: "lightbulb") {
+                DashboardRouter.shared.requestedTool = DashboardView.AITool.advisor.rawValue
+                openDashboard()
+            }
+            if advisorBadge.hasUnseen {
+                Circle().fill(Color.orange).frame(width: 7, height: 7).padding(.trailing, 14)
             }
         }
     }
