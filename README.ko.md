@@ -2,7 +2,7 @@
 
 Claude Code와 OpenAI Codex의 토큰 사용량을 실시간으로 추적하는 macOS 메뉴바 앱입니다.
 
-![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange) ![Version](https://img.shields.io/badge/version-1.3.0-green)
+![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue) ![Swift 5.9](https://img.shields.io/badge/Swift-5.9-orange) ![Version](https://img.shields.io/badge/version-1.4.0-green)
 
 [English](README.md) · **한국어**
 
