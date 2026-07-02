@@ -6,17 +6,23 @@ import SwiftUI
 struct MenuItemRow: View {
     let label: String
     let icon: String?
+    var badgeColor: Color? = nil
     let action: () -> Void
 
     @State private var isHovered = false
     @State private var isPressed = false
 
     var body: some View {
-        Group {
+        HStack(spacing: 8) {
             if let icon {
-                Label(label, systemImage: icon)
-            } else {
-                Text(label)
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .frame(width: 18, alignment: .center)   // 아이콘 폭 통일
+            }
+            Text(label)
+            Spacer(minLength: 0)
+            if let badgeColor {
+                Circle().fill(badgeColor).frame(width: 6, height: 6)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -180,7 +186,7 @@ struct MenuBarView: View {
             Image(systemName: "sparkle")
                 .font(.system(size: 10))
                 .foregroundStyle(.orange)
-            Text("Claude")
+            Text("ClaudeMonitor v\(ClaudeCodeHUDConnector.appVersion)")
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.primary)
             Spacer()
@@ -263,6 +269,15 @@ struct MenuBarView: View {
             .foregroundStyle(resetColor(resetMinutes))
         }
         .frame(maxWidth: .infinity)
+        .overlay(alignment: .topTrailing) {
+            // 갱신 주기 — 아주 작게, 눈에 잘 안 띄게
+            if pct != nil {
+                Text("\(AnthropicUsageReader.reloadIntervalSeconds)s")
+                    .font(.system(size: 7, design: .monospaced))
+                    .foregroundStyle(.quaternary)
+                    .padding(.trailing, 3)
+            }
+        }
     }
 
     // MARK: - Codex section
@@ -364,57 +379,25 @@ struct MenuBarView: View {
                 }
                 Divider()
             }
-            retroRow
-            newsRow
+            // 콘텐츠 탭 — 미확인 시 배지 점
+            MenuItemRow(label: "회고", icon: "sparkles",
+                        badgeColor: badge.hasUnseen ? .green : nil) { openTab(.retro) }
+            MenuItemRow(label: "뉴스", icon: "newspaper",
+                        badgeColor: newsBadge.hasUnseen ? .green : nil) { openTab(.news) }
+            MenuItemRow(label: "어드바이저", icon: "lightbulb",
+                        badgeColor: advisorBadge.hasUnseen ? .orange : nil) { openTab(.advisor) }
             Divider()
-            advisorRow
-            Divider()
+            // 앱 동작
             MenuItemRow(label: "대시보드 열기", icon: "chart.bar") { openDashboard() }
-            Divider()
-            MenuItemRow(label: "설정", icon: "gear") { openSettings() }
-            Divider()
+            MenuItemRow(label: "설정", icon: "gearshape") { openSettings() }
             MenuItemRow(label: "종료", icon: "power") { NSApplication.shared.terminate(nil) }
-
         }
     }
 
-    /// 회고 열기 — 새 회고 미확인 시 초록 점 배지.
-    private var retroRow: some View {
-        HStack(spacing: 0) {
-            MenuItemRow(label: badge.hasUnseen ? "회고  · 새 회고" : "회고", icon: "sparkles") {
-                DashboardRouter.shared.requestedTool = DashboardView.AITool.retro.rawValue
-                openDashboard()
-            }
-            if badge.hasUnseen {
-                Circle().fill(Color.green).frame(width: 7, height: 7).padding(.trailing, 14)
-            }
-        }
-    }
-
-    /// 라이브 어드바이저 열기 — 새 조언 미확인 시 주황 점 배지.
-    private var advisorRow: some View {
-        HStack(spacing: 0) {
-            MenuItemRow(label: advisorBadge.hasUnseen ? "어드바이저  · 새 조언" : "어드바이저", icon: "lightbulb") {
-                DashboardRouter.shared.requestedTool = DashboardView.AITool.advisor.rawValue
-                openDashboard()
-            }
-            if advisorBadge.hasUnseen {
-                Circle().fill(Color.orange).frame(width: 7, height: 7).padding(.trailing, 14)
-            }
-        }
-    }
-
-    /// 뉴스 열기 — 새 뉴스 미확인 시 초록 점 배지.
-    private var newsRow: some View {
-        HStack(spacing: 0) {
-            MenuItemRow(label: newsBadge.hasUnseen ? "뉴스  · 새 뉴스" : "뉴스", icon: "newspaper") {
-                DashboardRouter.shared.requestedTool = DashboardView.AITool.news.rawValue
-                openDashboard()
-            }
-            if newsBadge.hasUnseen {
-                Circle().fill(Color.green).frame(width: 7, height: 7).padding(.trailing, 14)
-            }
-        }
+    /// 대시보드의 특정 탭을 열도록 라우팅.
+    private func openTab(_ tool: DashboardView.AITool) {
+        DashboardRouter.shared.requestedTool = tool.rawValue
+        openDashboard()
     }
 
     // MARK: - Helpers
